@@ -1,8 +1,10 @@
-use clap::App;
+use clap::{crate_authors, crate_description, crate_version, App};
 use config::{Config, ConfigError, File};
-use serde_derive::Deserialize;
+use serde::Deserialize;
 
 use crate::bitcoin::Network;
+
+const FOLDER_DIR: &str = ".keyserver";
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
@@ -21,9 +23,13 @@ impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
         let mut s = Config::new();
 
-        // Set defaults
+        // Set defaults and set CLI
         let yaml = load_yaml!("cli.yml");
-        let matches = App::from_yaml(yaml).get_matches();
+        let matches = App::from_yaml(yaml)
+            .version(crate_version!())
+            .author(crate_authors!("\n"))
+            .about(crate_description!())
+            .get_matches();
         let home_dir = match dirs::home_dir() {
             Some(some) => some,
             None => return Err(ConfigError::Message("no home directory".to_string())),
@@ -36,13 +42,14 @@ impl Settings {
         s.set_default("zmq_port", "28332")?;
         s.set_default("secret", "secret")?;
         let mut default_db = home_dir.clone();
-        default_db.push(".keyserver-rust/db");
+        default_db.push(format!("{}/db", FOLDER_DIR));
         s.set_default("db_path", default_db.to_str())?;
-        s.set_default("network", "regnet")?;
+        s.set_default("network", "Regnet")?;
+        s.set_default("root_message", "You have found the keyserver.")?;
 
         // Load config from file
-        let mut default_config = home_dir;
-        default_config.push(".keyserver-rust/config");
+        let mut default_config = home_dir.clone();
+        default_config.push(format!("{}/config", FOLDER_DIR));
         let default_config_str = default_config.to_str().unwrap();
         let config_path = matches.value_of("config").unwrap_or(default_config_str);
         s.merge(File::with_name(config_path).required(false))?;
@@ -88,8 +95,8 @@ impl Settings {
         }
 
         // Set the bitcoin network
-        if let Some(db_path) = matches.value_of("network") {
-            s.set("network", db_path)?;
+        if let Some(network) = matches.value_of("network") {
+            s.set("network", network)?;
         }
 
         s.try_into()
