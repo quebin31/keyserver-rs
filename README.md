@@ -30,7 +30,7 @@ The executable will be located at `./target/release/keyserver`.
 
 ### Configuration
 
-Settings may be given by `JSON`, `TOML`, `YAML`, `HJSON` and `INI` files and, by default, are located at `~/.keyserver-rust/config.*`.
+Settings may be given by `JSON`, `TOML`, `YAML`, `HJSON` and `INI` files and, by default, are located at `~/.keyserver/config.*`.
 
 | Name | Description | Default |
 | - | - | - |
@@ -41,7 +41,7 @@ Settings may be given by `JSON`, `TOML`, `YAML`, `HJSON` and `INI` files and, by
 | `rpc_password` | Bitcoin RPC password | `password` |
 | `zmq_port` | Bitcoin ZMQ port | `28332` |
 | `secret` | Keyserver secret | `secret` |
-| `db_path` | Database path | `~/.keyserver-rust/db` |
+| `db_path` | Database path | `~/.keyserver/db` |
 | `network` | Bitcoin network | `regnet` |
 
 The `network` parameter must be either `mainnet`, `testnet` or `regnet`.
