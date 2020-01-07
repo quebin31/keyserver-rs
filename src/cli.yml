@@ -1,7 +1,5 @@
 name: Cash:web Keyserver - Rust implementation
 version: "0.1.0"
-author: Harry Barber <hlbarber93@gmail.com>
-about: Cash:web Keyserver is a BCH-based key and metadata server
 args:
     - config:
         short: c
