@@ -61,7 +61,9 @@ where
             .unwrap();
         let response = self.send(request).await.map_err(BitcoinError::Http)?;
         if response.is_error() {
-            return Err(BitcoinError::Rpc(response.error().unwrap()));
+            let err = response.error().unwrap();
+            warn!("{:#?}", err);
+            return Err(BitcoinError::Rpc(err));
         }
         response
             .into_result()
