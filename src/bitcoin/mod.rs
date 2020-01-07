@@ -14,7 +14,7 @@ use serde::Deserialize;
 
 use crate::{crypto::Address, models::bip70::Output, SETTINGS};
 
-pub use client::BitcoinClient;
+pub use client::{BitcoinClient, BitcoinError};
 
 const KEYSERVER_PREFIX: &[u8; 9] = b"keyserver";
 

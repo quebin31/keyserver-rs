@@ -80,7 +80,7 @@ pub async fn payment_handler(
     bitcoin_client
         .send_tx(tx_raw)
         .await
-        .map_err(|_| PaymentError::InvalidTx)?;
+        .map_err(PaymentError::TxReject)?;
 
     // Create payment ack
     let memo = Some("Thanks for your custom!".to_string());

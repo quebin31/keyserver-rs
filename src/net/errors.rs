@@ -6,7 +6,7 @@ use bitcoincash_addr::{base58, cashaddr};
 use prost::DecodeError;
 use rocksdb::Error as RocksError;
 
-use crate::crypto::errors::CryptoError;
+use crate::{bitcoin::BitcoinError, crypto::errors::CryptoError};
 
 #[derive(Debug)]
 pub enum ValidationError {
@@ -153,7 +153,7 @@ pub enum PaymentError {
     NoTx,
     TxDeserialize(TxDeserializeError),
     InvalidOutputs,
-    InvalidTx,
+    TxReject(BitcoinError),
     MismatchedNetwork,
     AddrFetchFailed,
 }
@@ -185,7 +185,12 @@ impl fmt::Display for PaymentError {
             PaymentError::NoTx => "no payment tx",
             PaymentError::TxDeserialize(_) => "payment tx malformed",
             PaymentError::InvalidOutputs => "invalid outputs",
-            PaymentError::InvalidTx => "invalid tx",
+            PaymentError::TxReject(err) => match err {
+                BitcoinError::EmptyResponse => "empty response",
+                BitcoinError::Http(err) => return err.fmt(f),
+                BitcoinError::Json(err) => return err.fmt(f),
+                BitcoinError::Rpc(err) => return write!(f, "{:#?}", err),
+            },
             PaymentError::AddrFetchFailed => "failed to fetch address",
             PaymentError::MismatchedNetwork => "address mismatched with node network",
         };
@@ -208,7 +213,7 @@ impl error::ResponseError for PaymentError {
             PaymentError::NoTx => HttpResponse::BadRequest(),
             PaymentError::TxDeserialize(_) => HttpResponse::BadRequest(),
             PaymentError::InvalidOutputs => HttpResponse::BadRequest(),
-            PaymentError::InvalidTx => HttpResponse::BadRequest(),
+            PaymentError::TxReject(_) => HttpResponse::BadRequest(),
             PaymentError::MismatchedNetwork => HttpResponse::BadRequest(),
             PaymentError::AddrFetchFailed => HttpResponse::InternalServerError(),
         }

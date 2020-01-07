@@ -25,6 +25,7 @@ impl<C> std::ops::Deref for BitcoinClient<C> {
     }
 }
 
+#[derive(Debug)]
 pub enum BitcoinError {
     Http(HttpError),
     Rpc(RpcError),
@@ -62,7 +63,6 @@ where
         let response = self.send(request).await.map_err(BitcoinError::Http)?;
         if response.is_error() {
             let err = response.error().unwrap();
-            warn!("{:#?}", err);
             return Err(BitcoinError::Rpc(err));
         }
         response
