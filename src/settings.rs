@@ -44,7 +44,7 @@ impl Settings {
         let mut default_db = home_dir.clone();
         default_db.push(format!("{}/db", FOLDER_DIR));
         s.set_default("db_path", default_db.to_str())?;
-        s.set_default("network", "Regnet")?;
+        s.set_default("network", "regnet")?;
         s.set_default("root_message", "You have found the keyserver.")?;
 
         // Load config from file
