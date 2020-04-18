@@ -30,7 +30,7 @@ Bitcoin must be running with [RPC](https://bitcoin.org/en/developer-reference#re
 
 ### Enabling Prometheus (optional)
 
-One can optionally enable a [Prometheus](https://prometheus.io/) exporter, by compiling using the `--feature monitor` feature flag.
+One can optionally enable a [Prometheus](https://prometheus.io/) exporter, by compiling using the `--feature monitoring` feature flag.
 
 ### Build
 
