@@ -1,43 +1,39 @@
 [package]
 name = "keyserver"
-version = "0.1.0"
-authors = ["Harry L. Barber <hlbarber93@gmail.com>"]
+version = "0.2.0"
+authors = ["Harry Barber <harrybarber@protonmail.com>"]
 edition = "2018"
+description = "Cash:web Keyserver is a Bitcoin public key and metadata registry"
+
+[features]
+monitoring = ["prometheus", "prometheus-static-metric"]
 
 [dependencies]
-actix-cors = "0.2.0"
-actix-files = "0.2.1"
-actix-web = "2.0.0"
-actix-service = "1.0.2"
-actix-rt = "1.0.0"
-base64 = "0.11.0"
+base64 = "0.12.0"
 bitcoin = "0.23.0"
-bitcoin-zmq = "0.2.0-alpha.1"
 bitcoincash-addr = "0.5.1"
-bitcoin_hashes = "0.7.3"
-bytes = "0.5.3"
+bitcoin_hashes = "0.7.6"
+bytes = "0.5.4"
+cashweb = { git = "https://github.com/cashweb/cashweb-rs" }
 clap = { version = "2.33.0", features = ["yaml"] }
 config = "0.10.1"
 dirs = "2.0.2"
-env_logger = "0.7.1"
-hex = "0.4.0"
+futures = "0.3.4"
+hex = "0.4.2"
+http = "0.2.1"
 json-rpc = { package = "async-json-rpc", git = "https://github.com/hlb8122/async-json-rpc" }
 lazy_static = "1.4.0"
 log = "0.4.8"
-futures = "0.3.1"
-prost = "0.6.0"
-reqwest = { git = "https://github.com/seanmonstar/reqwest", features = ["json"] }
+pretty_env_logger = "0.4.0"
+prost = "0.6.1"
+prometheus = { version = "0.8.0", optional = true }
+prometheus-static-metric = { version = "0.2.0", optional = true }
 rocksdb = "0.13.0"
 secp256k1 = { version = "0.17.2", features = ["rand-std"] }
-serde = { version = "1.0.104", features = ["derive"] }
-serde_json = "1.0.44"
+serde = { version = "1.0.106", features = ["derive"] }
+serde_json = "1.0.51"
+sha2 = "0.8.1"
 subtle = "2.2.2"
-tokio = { version = "0.2.9", features = ["time"] }
-rust-base58 = "0.0.4"
+tokio = { version = "0.2.18", features = ["blocking",  "macros", "rt-core", "rt-threaded", "sync", "time"] }
 url = "2.1.1"
-
-[build-dependencies]
-prost-build = "0.6.0"
-
-[dev-dependencies]
-bigdecimal = { version = "0.1.0", features = ["serde"] }
+warp = "0.2.2"

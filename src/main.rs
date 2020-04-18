@@ -1,118 +1,189 @@
 #[macro_use]
 extern crate clap;
 #[macro_use]
-extern crate log;
+extern crate serde;
 
 pub mod bitcoin;
-pub mod crypto;
 pub mod db;
+pub mod models;
 pub mod net;
 pub mod settings;
 
-use std::io;
+#[cfg(feature = "monitoring")]
+pub mod monitoring;
 
-use actix_cors::Cors;
-use actix_web::{http::header, middleware::Logger, web, App, HttpServer};
-use env_logger::Env;
+use std::{env, sync::Arc, time::Duration};
+
+use cashweb::{
+    payments::{preprocess_payment, wallet::Wallet},
+    token::schemes::hmac_bearer::HmacTokenScheme,
+};
+use futures::prelude::*;
 use lazy_static::lazy_static;
-
-use crate::{
-    bitcoin::{tx_stream, BitcoinClient, WalletState},
-    db::KeyDB,
-    net::{payments::*, *},
-    settings::Settings,
+use warp::{
+    http::{header, Method},
+    Filter,
 };
 
-pub mod models {
-    pub mod bip70 {
-        include!(concat!(env!("OUT_DIR"), "/bip70.rs"));
-    }
-    pub mod address_metadata {
-        include!(concat!(env!("OUT_DIR"), "/address_metadata.rs"));
-    }
-}
+#[cfg(feature = "monitoring")]
+use prometheus::{Encoder, TextEncoder};
+
+use crate::bitcoin::BitcoinClient;
+use db::Database;
+use net::{payments, protection};
+use settings::Settings;
+
+const METADATA_PATH: &str = "keys";
+pub const PAYMENTS_PATH: &str = "payments";
 
 lazy_static! {
+    // Static settings
     pub static ref SETTINGS: Settings = Settings::new().expect("couldn't load config");
 }
 
-#[actix_rt::main]
-async fn main() -> io::Result<()> {
-    // Init logging
-    env_logger::from_env(Env::default().default_filter_or("actix_web=info,keyserver=info")).init();
-    info!("starting server @ {}", SETTINGS.bind);
+#[tokio::main]
+async fn main() {
+    if env::var_os("RUST_LOG").is_none() {
+        env::set_var("RUST_LOG", "info");
+    }
+    pretty_env_logger::init();
 
-    // Open DB
-    let key_db = KeyDB::try_new(&SETTINGS.db_path).expect("failed to open database");
+    // Database state
+    let db = Database::try_new(&SETTINGS.db_path).expect("failed to open database");
+    let db_state = warp::any().map(move || db.clone());
 
-    // Init wallet
-    let wallet_state = WalletState::default();
+    // Wallet state
+    let wallet = Wallet::new(Duration::from_millis(SETTINGS.payments.timeout));
+    let wallet_state = warp::any().map(move || wallet.clone());
 
-    // Init Bitcoin client
+    // Bitcoin client state
     let bitcoin_client = BitcoinClient::new(
-        format!("http://{}:{}", SETTINGS.node_ip.clone(), SETTINGS.rpc_port),
-        SETTINGS.rpc_username.clone(),
-        SETTINGS.rpc_password.clone(),
+        SETTINGS.bitcoin_rpc.address.clone(),
+        SETTINGS.bitcoin_rpc.username.clone(),
+        SETTINGS.bitcoin_rpc.password.clone(),
     );
+    let bitcoin_client_state = warp::any().map(move || bitcoin_client.clone());
 
-    // Init ZMQ
-    let tx_stream =
-        tx_stream::get_tx_stream(&format!("tcp://{}:{}", SETTINGS.node_ip, SETTINGS.zmq_port))
-            .await
-            .expect("could not connect to ZMQ");
-    let key_stream = tx_stream::extract_details(tx_stream);
+    // Address string converter
+    let addr_base = warp::path::param().and_then(|addr_str: String| async move {
+        net::address_decode(&addr_str).map_err(warp::reject::custom)
+    });
 
-    // Peer client
-    let client = peer::PeerClient::default();
+    // Token generator
+    let key =
+        hex::decode(&SETTINGS.payments.hmac_secret).expect("unable to interpret hmac key as hex");
+    let token_scheme = Arc::new(HmacTokenScheme::new(&key));
+    let token_scheme_state = warp::any().map(move || token_scheme.clone());
 
-    // Setup peer polling logic
-    let peer_polling = client.peer_polling(key_db.clone(), key_stream);
-    actix_rt::Arbiter::current().send(Box::pin(peer_polling));
+    // Protection
+    let addr_protected = addr_base
+        .clone()
+        .and(warp::header::headers_cloned())
+        .and(token_scheme_state.clone())
+        .and(wallet_state.clone())
+        .and(bitcoin_client_state.clone())
+        .and_then(move |addr, headers, token_scheme, wallet, bitcoin| {
+            protection::pop_protection(addr, headers, token_scheme, wallet, bitcoin)
+                .map_err(warp::reject::custom)
+        });
 
-    // Init REST server
-    HttpServer::new(move || {
-        let key_db_inner = key_db.clone();
-        let wallet_state_inner = wallet_state.clone();
-        let bitcoin_client_inner = bitcoin_client.clone();
+    // Metadata handlers
+    let metadata_get = warp::path(METADATA_PATH)
+        .and(addr_base)
+        .and(warp::get())
+        .and(warp::query())
+        .and(db_state.clone())
+        .and_then(move |addr, query, db| {
+            net::get_metadata(addr, query, db).map_err(warp::reject::custom)
+        });
+    let metadata_put = warp::path(METADATA_PATH)
+        .and(addr_protected)
+        .and(warp::put())
+        .and(warp::body::content_length_limit(
+            SETTINGS.limits.metadata_size,
+        ))
+        .and(warp::body::bytes())
+        .and(db_state)
+        .and_then(move |addr, body, db| {
+            net::put_metadata(addr, body, db).map_err(warp::reject::custom)
+        });
 
-        // Init CORs
-        let cors = Cors::new()
-            .allowed_methods(vec!["GET", "PUT", "POST"])
-            .allowed_headers(vec![header::AUTHORIZATION, header::CONTENT_TYPE])
-            .expose_headers(vec![
-                header::AUTHORIZATION,
-                header::ACCEPT,
-                header::LOCATION,
-            ])
-            .finish();
+    // Payment handler
+    let payments = warp::path(PAYMENTS_PATH)
+        .and(warp::post())
+        .and(warp::header::headers_cloned())
+        .and(warp::body::content_length_limit(
+            SETTINGS.limits.metadata_size,
+        ))
+        .and(warp::body::bytes())
+        .and_then(move |headers, body| {
+            preprocess_payment(headers, body)
+                .map_err(payments::PaymentError::Preprocess)
+                .map_err(warp::reject::custom)
+        })
+        .and(wallet_state.clone())
+        .and(bitcoin_client_state.clone())
+        .and(token_scheme_state)
+        .and_then(
+            move |payment, wallet, bitcoin_client, token_state| async move {
+                net::process_payment(payment, wallet, bitcoin_client, token_state)
+                    .await
+                    .map_err(warp::reject::custom)
+            },
+        );
 
-        // Init app
-        App::new()
-            .wrap(Logger::default())
-            .wrap(Logger::new("%a %{User-Agent}i"))
-            .wrap(cors)
-            .service(
-                // Key scope
-                web::scope("/keys").service(
-                    web::resource("/{addr}")
-                        .data(key_db_inner)
-                        .wrap(CheckPayment::new(
-                            bitcoin_client_inner.clone(),
-                            wallet_state_inner.clone(),
-                        )) // Apply payment check to put key
-                        .route(web::get().to(get_key))
-                        .route(web::put().to(put_key)),
-                ),
-            )
-            .service(
-                // Payment endpoint
-                web::resource("/payments")
-                    .data((bitcoin_client_inner, wallet_state_inner))
-                    .route(web::post().to(payment_handler)),
-            )
-            .service(actix_files::Files::new("/", "./static/").index_file("index.html"))
-    })
-    .bind(&SETTINGS.bind)?
-    .run()
-    .await
+    // Root handler
+    let root = warp::path::end()
+        .and(warp::get())
+        .and(warp::fs::file("./static/index.html"));
+
+    // CORs
+    let cors = warp::cors()
+        .allow_any_origin()
+        .allow_methods(vec![Method::GET, Method::PUT, Method::POST, Method::DELETE])
+        .allow_headers(vec![header::AUTHORIZATION, header::CONTENT_TYPE])
+        .expose_headers(vec![
+            header::AUTHORIZATION,
+            header::ACCEPT,
+            header::LOCATION,
+        ])
+        .build();
+
+    // If monitoring is enabled
+    #[cfg(feature = "monitoring")]
+    {
+        // Init Prometheus server
+        let prometheus_server = warp::path("metrics").map(monitoring::export);
+        let prometheus_task = warp::serve(prometheus_server).run(SETTINGS.bind_prom);
+
+        // Init REST API
+        let rest_api = root
+            .or(payments)
+            .or(metadata_get)
+            .or(metadata_put)
+            .recover(net::handle_rejection)
+            .with(cors)
+            .with(warp::log("keyserver"))
+            .with(warp::log::custom(monitoring::measure));
+        let rest_api_task = warp::serve(rest_api).run(SETTINGS.bind);
+
+        // Spawn servers
+        tokio::spawn(prometheus_task);
+        tokio::spawn(rest_api_task).await.unwrap(); // Unrecoverable
+    }
+
+    // If monitoring is disabled
+    #[cfg(not(feature = "monitoring"))]
+    {
+        // Init REST API
+        let rest_api = root
+            .or(payments)
+            .or(metadata_get)
+            .or(metadata_put)
+            .recover(net::handle_rejection)
+            .with(cors)
+            .with(warp::log("keyserver"));
+        let rest_api_task = warp::serve(rest_api).run(SETTINGS.bind);
+        tokio::spawn(rest_api_task).await.unwrap(); // Unrecoverable
+    }
 }

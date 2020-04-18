@@ -1,6 +1,0 @@
-[submodule "pop"]
-	path = src/proto/pop
-	url = https://github.com/cashweb/pop-proto
-[submodule "addressmetadata"]
-	path = src/proto/metadata
-	url = https://github.com/cashweb/keyserver-proto

@@ -1,54 +1,112 @@
-use clap::{crate_authors, crate_description, crate_version, App};
+use std::net::SocketAddr;
+
+use clap::App;
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
 
 use crate::bitcoin::Network;
 
 const FOLDER_DIR: &str = ".keyserver";
+const DEFAULT_BIND: &str = "127.0.0.1:8080";
+const DEFAULT_RPC_ADDR: &str = "http://127.0.0.1:18443";
+const DEFAULT_RPC_USER: &str = "user";
+const DEFAULT_RPC_PASSWORD: &str = "password";
+const DEFAULT_NETWORK: &str = "regtest";
+const DEFAULT_PING_INTERVAL: u64 = 10_000;
+const DEFAULT_METADATA_LIMIT: usize = 1024 * 5; // 5Kb
+const DEFAULT_PAYMENT_LIMIT: usize = 1024 * 3; // 3Kb
+const DEFAULT_PAYMENT_TIMEOUT: usize = 1_000 * 60; // 60 seconds
+const DEFAULT_TRUNCATION_LENGTH: usize = 500;
+const DEFAULT_TOKEN_FEE: u64 = 100_000;
+const DEFAULT_MEMO: &str = "Thanks for your custom!";
+
+#[cfg(feature = "monitoring")]
+const DEFAULT_BIND_PROM: &str = "127.0.0.1:9095";
+
+#[derive(Debug, Deserialize)]
+pub struct BitcoinRpc {
+    pub address: String,
+    pub username: String,
+    pub password: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Limits {
+    pub metadata_size: u64,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Payment {
+    pub timeout: u64,
+    pub token_fee: u64,
+    pub memo: String,
+    pub hmac_secret: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Websocket {
+    pub ping_interval: u64,
+    pub truncation_length: u64,
+}
 
 #[derive(Debug, Deserialize)]
 pub struct Settings {
-    pub bind: String,
-    pub node_ip: String,
-    pub rpc_port: u16,
-    pub rpc_username: String,
-    pub rpc_password: String,
-    pub zmq_port: u16,
-    pub secret: String,
+    pub bind: SocketAddr,
+    #[cfg(feature = "monitoring")]
+    pub bind_prom: SocketAddr,
     pub db_path: String,
     pub network: Network,
+    pub bitcoin_rpc: BitcoinRpc,
+    pub limits: Limits,
+    pub payments: Payment,
+    pub websocket: Websocket,
 }
 
 impl Settings {
     pub fn new() -> Result<Self, ConfigError> {
         let mut s = Config::new();
 
-        // Set defaults and set CLI
+        // Set defaults
         let yaml = load_yaml!("cli.yml");
+        #[allow(deprecated)]
         let matches = App::from_yaml(yaml)
-            .version(crate_version!())
-            .author(crate_authors!("\n"))
             .about(crate_description!())
+            .author(crate_authors!("\n"))
+            .version(crate_version!())
             .get_matches();
         let home_dir = match dirs::home_dir() {
             Some(some) => some,
             None => return Err(ConfigError::Message("no home directory".to_string())),
         };
-        s.set_default("bind", "127.0.0.1:8080")?;
-        s.set_default("node_ip", "127.0.0.1")?;
-        s.set_default("rpc_port", "18443")?;
-        s.set_default("rpc_username", "username")?;
-        s.set_default("rpc_password", "password")?;
-        s.set_default("zmq_port", "28332")?;
-        s.set_default("secret", "secret")?;
+        s.set_default("bind", DEFAULT_BIND)?;
+        #[cfg(feature = "monitoring")]
+        s.set_default("bind_prom", DEFAULT_BIND_PROM)?;
+        s.set_default("network", DEFAULT_NETWORK)?;
         let mut default_db = home_dir.clone();
         default_db.push(format!("{}/db", FOLDER_DIR));
         s.set_default("db_path", default_db.to_str())?;
-        s.set_default("network", "regnet")?;
-        s.set_default("root_message", "You have found the keyserver.")?;
+        s.set_default("bitcoin_rpc.address", DEFAULT_RPC_ADDR)?;
+        s.set_default("bitcoin_rpc.username", DEFAULT_RPC_USER)?;
+        s.set_default("bitcoin_rpc.password", DEFAULT_RPC_PASSWORD)?;
+        s.set_default("limits.metadata_size", DEFAULT_METADATA_LIMIT as i64)?;
+        s.set_default("limits.payment_size", DEFAULT_PAYMENT_LIMIT as i64)?;
+        s.set_default("payments.token_fee", DEFAULT_TOKEN_FEE as i64)?;
+        s.set_default("payments.memo", DEFAULT_MEMO)?;
+        s.set_default("payments.timeout", DEFAULT_PAYMENT_TIMEOUT as i64)?;
+        s.set_default(
+            "websocket.truncation_length",
+            DEFAULT_TRUNCATION_LENGTH as i64,
+        )?;
+        s.set_default("websocket.ping_interval", DEFAULT_PING_INTERVAL as i64)?;
+
+        // NOTE: Don't set HMAC key to a default during release for security reasons
+        #[cfg(debug_assertions)]
+        {
+            s.set_default("payments.hmac_secret", "1234")?;
+        }
 
         // Load config from file
-        let mut default_config = home_dir.clone();
+        let mut default_config = home_dir;
         default_config.push(format!("{}/config", FOLDER_DIR));
         let default_config_str = default_config.to_str().unwrap();
         let config_path = matches.value_of("config").unwrap_or(default_config_str);
@@ -59,34 +117,14 @@ impl Settings {
             s.set("bind", bind)?;
         }
 
-        // Set node IP from cmd line
-        if let Some(node_ip) = matches.value_of("node-ip") {
-            s.set("node_ip", node_ip)?;
+        // Set bind address from cmd line
+        if let Some(bind_prom) = matches.value_of("bind-prom") {
+            s.set("bind_prom", bind_prom)?;
         }
 
-        // Set rpc port from cmd line
-        if let Ok(rpc_port) = value_t!(matches, "rpc-port", i64) {
-            s.set("rpc_port", rpc_port)?;
-        }
-
-        // Set rpc username from cmd line
-        if let Some(rpc_username) = matches.value_of("rpc-username") {
-            s.set("rpc_username", rpc_username)?;
-        }
-
-        // Set rpc password from cmd line
-        if let Some(rpc_password) = matches.value_of("rpc-password") {
-            s.set("rpc_password", rpc_password)?;
-        }
-
-        // Set zmq port from cmd line
-        if let Ok(node_zmq_port) = value_t!(matches, "zmq-port", i64) {
-            s.set("zmq_port", node_zmq_port)?;
-        }
-
-        // Set secret from cmd line
-        if let Some(secret) = matches.value_of("secret") {
-            s.set("secret", secret)?;
+        // Set the bitcoin network
+        if let Some(network) = matches.value_of("network") {
+            s.set("network", network)?;
         }
 
         // Set db from cmd line
@@ -94,9 +132,24 @@ impl Settings {
             s.set("db_path", db_path)?;
         }
 
-        // Set the bitcoin network
-        if let Some(network) = matches.value_of("network") {
-            s.set("network", network)?;
+        // Set node IP from cmd line
+        if let Some(node_ip) = matches.value_of("rpc-addr") {
+            s.set("bitcoin_rpc.address", node_ip)?;
+        }
+
+        // Set rpc username from cmd line
+        if let Some(rpc_username) = matches.value_of("rpc-username") {
+            s.set("bitcoin_rpc.username", rpc_username)?;
+        }
+
+        // Set rpc password from cmd line
+        if let Some(rpc_password) = matches.value_of("rpc-password") {
+            s.set("bitcoin_rpc.password", rpc_password)?;
+        }
+
+        // Set secret from cmd line
+        if let Some(hmac_secret) = matches.value_of("hmac-secret") {
+            s.set("payments.hmac_secret", hmac_secret)?;
         }
 
         s.try_into()
