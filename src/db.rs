@@ -5,7 +5,7 @@ use rocksdb::{Error as RocksError, Options, DB};
 
 use crate::models::wrapper::AuthWrapper;
 
-const METADATA_NAMESPACE: u8 = b'p';
+const METADATA_NAMESPACE: u8 = b'm';
 
 #[derive(Clone)]
 pub struct Database(Arc<DB>);
