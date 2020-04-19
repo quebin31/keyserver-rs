@@ -6,6 +6,7 @@ use prost::Message as _;
 use rocksdb::Error as RocksError;
 use secp256k1::{key::PublicKey, Error as SecpError, Message, Secp256k1, Signature};
 use sha2::{Digest, Sha256};
+use tokio::task;
 use warp::{http::Response, hyper::Body, reject::Reject};
 
 use super::IntoResponse;
@@ -69,8 +70,9 @@ pub async fn get_metadata(
     database: Database,
 ) -> Result<Response<Body>, MetadataError> {
     // Get metadata
-    let metadata = database
-        .get_metadata(addr.as_body())?
+    let metadata = task::spawn_blocking(move || database.get_metadata(addr.as_body()))
+        .await
+        .unwrap()?
         .ok_or(MetadataError::NotFound)?;
 
     // Serialize messages
@@ -113,7 +115,9 @@ pub async fn put_metadata(
         .map_err(MetadataError::InvalidSignature)?;
 
     // Put to database
-    db_data.put_metadata(addr.as_body(), &metadata_raw)?;
+    task::spawn_blocking(move || db_data.put_metadata(addr.as_body(), &metadata_raw))
+        .await
+        .unwrap()?;
 
     // Respond
     Ok(Response::builder().body(Body::empty()).unwrap())
