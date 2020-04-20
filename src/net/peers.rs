@@ -43,7 +43,7 @@ impl IntoResponse for PeerError {
 pub async fn get_peers<C>(
     peer_state: Arc<RwLock<PeerState<C>>>,
 ) -> Result<Response<Body>, PeerError> {
-    if SETTINGS.peering.enabled {
+    if !SETTINGS.peering.enabled {
         return Err(PeerError::Unavailable);
     }
 
