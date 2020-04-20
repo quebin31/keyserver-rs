@@ -75,10 +75,6 @@ pub async fn get_metadata(
         .unwrap()?
         .ok_or(MetadataError::NotFound)?;
 
-    // Serialize messages
-    let mut raw_metadata = Vec::with_capacity(metadata.encoded_len());
-    metadata.encode(&mut raw_metadata).unwrap();
-
     // Respond
     match query.digest {
         Some(true) => {

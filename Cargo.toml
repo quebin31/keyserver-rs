@@ -21,6 +21,8 @@ dirs = "2.0.2"
 futures = "0.3.4"
 hex = "0.4.2"
 http = "0.2.1"
+hyper = "0.13.5"
+json-rpc = { package = "async-json-rpc", git = "https://github.com/hlb8122/async-json-rpc" }
 lazy_static = "1.4.0"
 log = "0.4.8"
 pretty_env_logger = "0.4.0"

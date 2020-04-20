@@ -7,6 +7,7 @@ pub mod bitcoin;
 pub mod db;
 pub mod models;
 pub mod net;
+pub mod peering;
 pub mod settings;
 
 #[cfg(feature = "monitoring")]
@@ -19,21 +20,25 @@ use cashweb::{
     token::schemes::hmac_bearer::HmacTokenScheme,
 };
 use futures::prelude::*;
+use hyper::client::HttpConnector;
 use lazy_static::lazy_static;
+#[cfg(feature = "monitoring")]
+use prometheus::{Encoder, TextEncoder};
+use tokio::sync::RwLock;
 use warp::{
     http::{header, Method},
     Filter,
 };
 
-#[cfg(feature = "monitoring")]
-use prometheus::{Encoder, TextEncoder};
-
-use cashweb::bitcoin_client::BitcoinClient;
+use crate::bitcoin::BitcoinClient;
 use db::Database;
+use models::address_metadata::Peers;
 use net::{payments, protection};
+use peering::PeerState;
 use settings::Settings;
 
 const METADATA_PATH: &str = "keys";
+const PEERS_PATH: &str = "peers";
 pub const PAYMENTS_PATH: &str = "payments";
 
 lazy_static! {
@@ -48,8 +53,27 @@ async fn main() {
     }
     pretty_env_logger::init();
 
-    // Database state
+    // Initialize database
     let db = Database::try_new(&SETTINGS.db_path).expect("failed to open database");
+
+    // Initialize peering
+    let peers_opt = db.get_peers().unwrap(); // Unrecoverable
+    let peers = peers_opt.unwrap_or(Peers::default());
+    let mut connector = HttpConnector::new();
+    connector.set_keepalive(Some(Duration::from_secs(30)));
+    connector.set_connect_timeout(Some(Duration::from_secs(60)));
+    let mut peer_state = PeerState::new(peers, connector);
+    let new_peers = peer_state.traverse().await;
+    peer_state.set_peers(new_peers);
+    if let Err(err) = peer_state.persist(&db) {
+        log::error!("failed to persist new peer state; {}", err);
+    }
+
+    // Peer state
+    let shared_peering = Arc::new(RwLock::new(peer_state));
+    let peer_state = warp::any().map(move || shared_peering.clone());
+
+    // Database state
     let db_state = warp::any().map(move || db.clone());
 
     // Wallet state
@@ -103,9 +127,17 @@ async fn main() {
             SETTINGS.limits.metadata_size,
         ))
         .and(warp::body::bytes())
-        .and(db_state)
+        .and(db_state.clone())
         .and_then(move |addr, body, db| {
             net::put_metadata(addr, body, db).map_err(warp::reject::custom)
+        });
+
+    // Peer handler
+    let peers_get = warp::path(PEERS_PATH)
+        .and(warp::get())
+        .and(peer_state)
+        .and_then(move |peer_state| {
+            net::get_peers(peer_state).map_err(warp::reject::custom)
         });
 
     // Payment handler
@@ -161,6 +193,7 @@ async fn main() {
             .or(payments)
             .or(metadata_get)
             .or(metadata_put)
+            .or(peers_get)
             .recover(net::handle_rejection)
             .with(cors)
             .with(warp::log("keyserver"))
@@ -180,6 +213,7 @@ async fn main() {
             .or(payments)
             .or(metadata_get)
             .or(metadata_put)
+            .or(peers_get)
             .recover(net::handle_rejection)
             .with(cors)
             .with(warp::log("keyserver"));
