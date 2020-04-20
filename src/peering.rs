@@ -127,7 +127,7 @@ where
     }
 
     pub async fn get_fan(&self, url_set: &HashSet<String>) -> HashSet<String> {
-        let fan = url_set.into_iter().map(|url| self.get_peers(url));
+        let fan = url_set.iter().map(|url| self.get_peers(url));
         let new_urls: HashSet<String> = futures::future::join_all(fan)
             .await
             .into_iter()

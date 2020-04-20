@@ -32,7 +32,6 @@ use warp::{
 
 use crate::bitcoin::BitcoinClient;
 use db::Database;
-use models::address_metadata::Peers;
 use net::{payments, protection};
 use peering::PeerState;
 use settings::Settings;
@@ -58,7 +57,7 @@ async fn main() {
 
     // Initialize peering
     let peers_opt = db.get_peers().unwrap(); // Unrecoverable
-    let peers = peers_opt.unwrap_or(Peers::default());
+    let peers = peers_opt.unwrap_or_default();
     let mut connector = HttpConnector::new();
     connector.set_keepalive(Some(Duration::from_secs(30)));
     connector.set_connect_timeout(Some(Duration::from_secs(60)));
