@@ -19,6 +19,8 @@ const DEFAULT_PAYMENT_TIMEOUT: usize = 1_000 * 60; // 60 seconds
 const DEFAULT_TRUNCATION_LENGTH: usize = 500;
 const DEFAULT_TOKEN_FEE: u64 = 100_000;
 const DEFAULT_MEMO: &str = "Thanks for your custom!";
+const DEFAULT_MAX_PEERS: u32 = 128;
+const DEFAULT_PEERING: bool = true;
 
 #[cfg(feature = "monitoring")]
 const DEFAULT_BIND_PROM: &str = "127.0.0.1:9095";
@@ -50,6 +52,12 @@ pub struct Websocket {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct Peering {
+    pub enabled: bool,
+    pub max_peers: u32,
+}
+
+#[derive(Debug, Deserialize)]
 pub struct Settings {
     pub bind: SocketAddr,
     #[cfg(feature = "monitoring")]
@@ -59,6 +67,7 @@ pub struct Settings {
     pub bitcoin_rpc: BitcoinRpc,
     pub limits: Limits,
     pub payments: Payment,
+    pub peering: Peering,
     pub websocket: Websocket,
 }
 
@@ -98,6 +107,8 @@ impl Settings {
             DEFAULT_TRUNCATION_LENGTH as i64,
         )?;
         s.set_default("websocket.ping_interval", DEFAULT_PING_INTERVAL as i64)?;
+        s.set_default("peering.enabled", DEFAULT_PEERING)?;
+        s.set_default("peering.max_peers", DEFAULT_MAX_PEERS as i64)?;
 
         // NOTE: Don't set HMAC key to a default during release for security reasons
         #[cfg(debug_assertions)]
