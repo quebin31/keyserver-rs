@@ -5,7 +5,7 @@ use tokio::sync::RwLock;
 use warp::{http::Response, hyper::Body, reject::Reject};
 
 use super::IntoResponse;
-use crate::{db::Database, peering::PeerState, SETTINGS};
+use crate::{peering::PeerState, SETTINGS};
 
 #[derive(Debug)]
 pub enum PeerError {

@@ -136,9 +136,7 @@ async fn main() {
     let peers_get = warp::path(PEERS_PATH)
         .and(warp::get())
         .and(peer_state)
-        .and_then(move |peer_state| {
-            net::get_peers(peer_state).map_err(warp::reject::custom)
-        });
+        .and_then(move |peer_state| net::get_peers(peer_state).map_err(warp::reject::custom));
 
     // Payment handler
     let payments = warp::path(PAYMENTS_PATH)
