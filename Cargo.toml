@@ -21,7 +21,6 @@ dirs = "2.0.2"
 futures = "0.3.4"
 hex = "0.4.2"
 http = "0.2.1"
-json-rpc = { package = "async-json-rpc", git = "https://github.com/hlb8122/async-json-rpc" }
 lazy_static = "1.4.0"
 log = "0.4.8"
 pretty_env_logger = "0.4.0"
@@ -31,7 +30,6 @@ prometheus-static-metric = { version = "0.2.0", optional = true }
 rocksdb = "0.13.0"
 secp256k1 = { version = "0.17.2", features = ["rand-std"] }
 serde = { version = "1.0.106", features = ["derive"] }
-serde_json = "1.0.51"
 sha2 = "0.8.1"
 subtle = "2.2.2"
 tokio = { version = "0.2.18", features = ["blocking",  "macros", "rt-core", "rt-threaded", "sync", "time"] }

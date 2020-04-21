@@ -10,6 +10,7 @@ use bitcoin::{
 use bitcoincash_addr::{
     base58::DecodingError as Base58Error, cashaddr::DecodingError as CashAddrError, Address,
 };
+use cashweb::bitcoin_client::{BitcoinClient, HttpConnector, NodeError};
 use cashweb::{
     payments::{
         wallet::{Wallet as WalletGeneric, WalletError},
@@ -18,7 +19,6 @@ use cashweb::{
     protobuf::bip70::{PaymentAck, PaymentDetails, PaymentRequest},
     token::{schemes::hmac_bearer::HmacTokenScheme, TokenGenerator},
 };
-use json_rpc::clients::http::HttpConnector;
 use prost::Message as _;
 use warp::{
     http::{header::AUTHORIZATION, Response},
@@ -28,7 +28,6 @@ use warp::{
 
 use super::IntoResponse;
 use crate::{
-    bitcoin::{BitcoinClient, NodeError},
     models::bip70::{Output, Payment},
     PAYMENTS_PATH, SETTINGS,
 };

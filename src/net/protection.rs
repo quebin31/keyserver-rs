@@ -1,15 +1,12 @@
 use std::{fmt, sync::Arc};
 
 use bitcoincash_addr::Address;
+use cashweb::bitcoin_client::{BitcoinClient, HttpConnector};
 use cashweb::token::{extract_pop, schemes::hmac_bearer::*, TokenValidator};
 use http::header::HeaderMap;
-use json_rpc::clients::http::HttpConnector;
 use warp::{http::Response, hyper::Body, reject::Reject};
 
-use crate::{
-    bitcoin::BitcoinClient,
-    net::payments::{generate_payment_request, Wallet},
-};
+use crate::net::payments::{generate_payment_request, Wallet};
 
 #[derive(Debug)]
 pub enum ProtectionError {

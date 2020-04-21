@@ -28,7 +28,7 @@ use warp::{
 #[cfg(feature = "monitoring")]
 use prometheus::{Encoder, TextEncoder};
 
-use crate::bitcoin::BitcoinClient;
+use cashweb::bitcoin_client::BitcoinClient;
 use db::Database;
 use net::{payments, protection};
 use settings::Settings;
