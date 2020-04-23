@@ -1,7 +1,9 @@
 import bitcoin
 import os
 import requests
-from addressmetadata_pb2 import *
+import hashlib
+from keyserver_pb2 import *
+from wrapper_pb2 import *
 from bitcoinrpc.authproxy import AuthServiceProxy, JSONRPCException
 from bitcoin.core.key import CECKey
 from bitcoin.wallet import P2PKHBitcoinAddress
@@ -9,8 +11,7 @@ from bitcoin.core import CMutableTransaction, CMutableTxIn
 from decimal import Decimal
 from hashlib import sha256
 from paymentrequest_pb2 import *
-from time import time
-
+from time import time, sleep
 
 # Generate protobuf code
 # protoc -I=../src/proto --python_out=. ../src/proto/*.proto
@@ -27,7 +28,7 @@ BASE_URL = "http://0.0.0.0:8080"
 bitcoin.SelectParams("regtest")
 
 # Init Bitcoin RPC
-rpc_user = "username"
+rpc_user = "user"
 rpc_password = "password"
 rpc_connection = AuthServiceProxy(
     "http://%s:%s@127.0.0.1:18443" % (rpc_user, rpc_password))
@@ -43,8 +44,29 @@ public_key = keypair.get_pubkey()
 # Generate key addr
 key_addr = str(P2PKHBitcoinAddress.from_pubkey(public_key))
 
-# Put key without payment
-response = requests.put(url=BASE_URL + "/keys/" + key_addr)
+# Construct Payload
+header = Header(name="Something wicked", value="this way comes")
+entry = Entry(
+    headers=[header], entry_data=b'This gonna be so fucking fast')
+timestamp = int(time())
+metadata = AddressMetadata(timestamp=timestamp, ttl=3000, entries=[entry])
+
+# Sign
+raw_metadata = metadata.SerializeToString()
+digest = sha256(raw_metadata).digest()
+signature, _ = keypair.sign_compact(digest)
+
+# Address metadata
+auth_wrapper = AuthWrapper(
+    pub_key=public_key, serialized_payload=raw_metadata, scheme=1, signature=signature)
+raw_addr_meta = auth_wrapper.SerializeToString()
+
+# Commit
+metadata_digest = sha256(raw_addr_meta).digest().hex()
+response = requests.post(url=BASE_URL + "/commit", params={
+    'address': key_addr,
+    'metadata_digest': metadata_digest
+})
 assert(response.status_code == 402)  # Payment required
 
 # Deserialize invoice
@@ -53,7 +75,7 @@ payment_details_raw = payment_request.serialized_payment_details
 payment_details = PaymentDetails.FromString(payment_details_raw)
 
 # Payment amount
-price = Decimal(payment_details.outputs[0].amount) / 1_00_000_000
+burn_amount = Decimal(100_000) / 1_00_000_000
 
 # Collect inputs
 fee = Decimal(5) / 10_000_000
@@ -61,7 +83,7 @@ utxos = rpc_connection.listunspent()
 inputs = []
 input_value = Decimal(0)
 for utxo in utxos:
-    if input_value < price + fee:
+    if input_value < burn_amount + fee:
         inputs.append({
             "txid": utxo["txid"],
             "vout": utxo["vout"]
@@ -72,14 +94,9 @@ for utxo in utxos:
 
 # Create outputs
 my_addr = utxo["address"]
-change = input_value - price - fee
-p2pkh = payment_details.outputs[0].script
-op_return = payment_details.outputs[1].script[2:].hex()
-payment_addr = str(P2PKHBitcoinAddress.from_scriptPubKey(p2pkh))
+change = input_value - burn_amount - fee
+op_return = payment_details.outputs[0].script[2:].hex()
 outputs = [
-    {
-        payment_addr: price  # Payment output
-    },
     {
         "data": op_return
     },
@@ -99,7 +116,7 @@ payment = Payment(merchant_data=payment_details.merchant_data,
 payment_raw = payment.SerializeToString()
 
 # Send payment
-payment_url = payment_details.payment_url
+payment_url = BASE_URL + payment_details.payment_url
 headers = {
     "Content-Type": "application/bitcoincash-payment",
     "Accept": "application/bitcoincash-paymentack"
@@ -113,28 +130,13 @@ print("PaymentACK memo:", payment_ack.memo)
 redirect_url = response.headers["Location"]
 token_header = response.headers["Authorization"]
 
-# Construct Payload
-header = Header(name="Something wicked", value="this way comes")
-entry = Entry(
-    headers=[header], entry_data=b'This gonna be so fucking fast')
-timestamp = int(time())
-payload = Payload(timestamp=timestamp, ttl=3000, entries=[entry])
-
-# Sign
-raw_payload = payload.SerializeToString()
-digest = sha256(raw_payload).digest()
-signature, _ = keypair.sign_compact(digest)
-
-# Address metadata
-addr_metadata = AddressMetadata(
-    pub_key=public_key, serialized_payload=raw_payload, scheme=1, signature=signature)
-raw_addr_meta = addr_metadata.SerializeToString()
-
 # Put metadata using payment token
-response = requests.put(url=redirect_url, data=raw_addr_meta, headers={
+response = requests.put(url=BASE_URL + redirect_url, data=raw_addr_meta, headers={
                         "Authorization": token_header})
+
+sleep(3)
 
 # Get metadata
 response = requests.get(url=BASE_URL + "/keys/" + key_addr)
-addr_metadata = AddressMetadata.FromString(response.content)
+addr_metadata = AuthWrapper.FromString(response.content)
 print(addr_metadata)

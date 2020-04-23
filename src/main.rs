@@ -32,7 +32,6 @@ use warp::{
 
 use db::Database;
 use net::{payments, protection};
-use payments::COMMITMENT_PREIMAGE_SIZE;
 use peering::PeerState;
 use settings::Settings;
 
@@ -138,10 +137,7 @@ async fn main() {
     // Commitment handler
     let commit = warp::path(COMMIT_PATH)
         .and(warp::post())
-        .and(warp::body::content_length_limit(
-            COMMITMENT_PREIMAGE_SIZE as u64,
-        ))
-        .and(warp::body::bytes())
+        .and(warp::query())
         .and_then(move |body| net::commit(body).map_err(warp::reject::custom));
 
     // Payment handler

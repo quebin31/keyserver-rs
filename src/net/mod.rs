@@ -76,6 +76,11 @@ pub async fn handle_rejection(err: Rejection) -> Result<Response<Body>, Infallib
         return Ok(err.into_response());
     }
 
+    if let Some(err) = err.find::<PaymentRequestError>() {
+        log::error!("{:#?}", err);
+        return Ok(err.into_response());
+    }
+
     if let Some(err) = err.find::<PeerError>() {
         log::error!("{:#?}", err);
         return Ok(err.into_response());

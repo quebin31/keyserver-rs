@@ -7,9 +7,8 @@ use bitcoin::{
     consensus::encode::Error as BitcoinError, util::psbt::serialize::Deserialize, Transaction,
 };
 use bitcoincash_addr::{
-    base58::DecodingError as Base58Error, cashaddr::DecodingError as CashAddrError,
+    base58::DecodingError as Base58Error, cashaddr::{DecodingError as CashAddrError, EncodingError as AddrEncodingError}, Address
 };
-use bytes::Bytes;
 use cashweb::bitcoin_client::{BitcoinClient, HttpConnector, NodeError};
 use cashweb::{
     payments::PreprocessingError,
@@ -19,12 +18,12 @@ use cashweb::{
 use prost::Message as _;
 use sha2::{Digest, Sha256};
 use warp::{
-    http::{header::AUTHORIZATION, Response},
+    http::{header::{AUTHORIZATION, LOCATION}, Response},
     hyper::Body,
     reject::Reject,
 };
 
-use super::IntoResponse;
+use super::{IntoResponse, address_decode};
 use crate::{
     models::bip70::{Output, Payment},
     PAYMENTS_PATH, SETTINGS,
@@ -41,16 +40,20 @@ pub enum PaymentError {
     MalformedTx(BitcoinError),
     MissingMerchantData,
     Node(NodeError),
+    IncorrectLengthPreimage,
+    Address(AddrEncodingError)
 }
 
 impl fmt::Display for PaymentError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let printable = match self {
+            Self::Address(err) => return err.fmt(f),
             Self::Preprocess(err) => return err.fmt(f),
             Self::MissingCommitment => "missing commitment",
             Self::MalformedTx(err) => return err.fmt(f),
             Self::MissingMerchantData => "missing merchant data",
             Self::Node(err) => return err.fmt(f),
+            Self::IncorrectLengthPreimage => "incorrect length preimage",
         };
         f.write_str(printable)
     }
@@ -61,6 +64,8 @@ impl Reject for PaymentError {}
 impl IntoResponse for PaymentError {
     fn to_status(&self) -> u16 {
         match self {
+            Self::Address(_) => 400,
+            Self::IncorrectLengthPreimage => 400,
             Self::Preprocess(err) => match err {
                 PreprocessingError::MissingAcceptHeader => 406,
                 PreprocessingError::MissingContentTypeHeader => 415,
@@ -90,10 +95,29 @@ pub async fn process_payment(
     let txs = txs_res.map_err(PaymentError::MalformedTx)?;
 
     // Find commitment output
-    let commitment = payment
+    let commitment_preimage = payment
         .merchant_data
         .as_ref()
         .ok_or(PaymentError::MissingMerchantData)?;
+
+    if commitment_preimage.len() != COMMITMENT_PREIMAGE_SIZE {
+        return Err(PaymentError::IncorrectLengthPreimage);
+    }
+
+    // Get address
+    let pub_key_hash = &commitment_preimage[..20];
+    let address = Address {
+        body: pub_key_hash.to_vec(),
+        ..Default::default()
+    };
+    let addr_str = address.encode().map_err(PaymentError::Address)?;
+
+    // Extract metadata
+    let address_metadata_hash = &commitment_preimage[20..COMMITMENT_PREIMAGE_SIZE];
+
+    let expected_commitment = construct_commitment(pub_key_hash, address_metadata_hash);
+
+    log::info!("expected: {}", hex::encode(&expected_commitment));
     let (tx_id, vout) = txs
         .iter()
         .find_map(|tx| {
@@ -105,14 +129,18 @@ pub async fn process_payment(
                     if raw_script.len() == 2 + COMMITMENT_SIZE
                         && raw_script[0] == OP_RETURN
                         && raw_script[1] == COMMITMENT_SIZE as u8
-                        && raw_script[2..34] == commitment[..]
+                        && raw_script[2..34] == expected_commitment[..]
                     {
                         Some(vout)
                     } else {
                         None
                     }
                 })
-                .map(|vout| (tx.txid(), vout))
+                .map(|vout| {
+                    let mut tx_id = tx.txid().to_vec();
+                    tx_id.reverse();
+                    (tx_id, vout)
+                })
         })
         .ok_or(PaymentError::MissingCommitment)?;
 
@@ -136,6 +164,7 @@ pub async fn process_payment(
     payment_ack.encode(&mut raw_ack).unwrap();
 
     Ok(Response::builder()
+        .header(LOCATION, format!("/keys/{}", addr_str))
         .header(AUTHORIZATION, token)
         .body(Body::from(raw_ack))
         .unwrap())
@@ -143,10 +172,11 @@ pub async fn process_payment(
 
 #[derive(Debug)]
 pub enum PaymentRequestError {
-    IncorrectLength,
+    IncorrectLengthPreimage,
     Address(CashAddrError, Base58Error),
     Node(NodeError),
     UnepxectedNetwork,
+    Hex(hex::FromHexError)
 }
 
 impl fmt::Display for PaymentRequestError {
@@ -155,9 +185,10 @@ impl fmt::Display for PaymentRequestError {
             Self::Address(cash_err, base58_err) => {
                 f.write_str(&format!("{}, {}", cash_err, base58_err))
             }
+            Self::Hex(err) => err.fmt(f),
             Self::Node(err) => err.fmt(f),
             Self::UnepxectedNetwork => f.write_str("unexpected network"),
-            Self::IncorrectLength => f.write_str("incorrect length"),
+            Self::IncorrectLengthPreimage => f.write_str("incorrect length preimage"),
         }
     }
 }
@@ -167,8 +198,9 @@ impl Reject for PaymentRequestError {}
 impl IntoResponse for PaymentRequestError {
     fn to_status(&self) -> u16 {
         match self {
-            Self::IncorrectLength => 400,
             Self::Address(_, _) => 400,
+            Self::Hex(_) => 400,
+            Self::IncorrectLengthPreimage => 400,
             Self::Node(err) => match err {
                 NodeError::Rpc(_) => 400,
                 _ => 500,
@@ -178,23 +210,21 @@ impl IntoResponse for PaymentRequestError {
     }
 }
 
-pub async fn commit(body: Bytes) -> Result<Response<Body>, PaymentRequestError> {
-    if body.len() != COMMITMENT_PREIMAGE_SIZE {
-        return Err(PaymentRequestError::IncorrectLength);
-    }
-
-    // Extract metadata
-    let pub_key_hash = &body[..20];
-    let address_metadata_hash = &body[20..32];
-    generate_payment_request(pub_key_hash, address_metadata_hash).await
+#[derive(Debug, Deserialize)]
+pub struct CommitQuery {
+    address: String,
+    metadata_digest: String
 }
 
-pub async fn generate_payment_request(
-    pub_key_hash: &[u8],
-    address_metadata_hash: &[u8],
+pub async fn commit(
+    query: CommitQuery
 ) -> Result<Response<Body>, PaymentRequestError> {
+    // Parse query
+    let addr = address_decode(&query.address).map_err(|err| PaymentRequestError::Address(err.0, err.1))?;
+    let metadata_digest_raw = hex::decode(query.metadata_digest).map_err(PaymentRequestError::Hex)?; 
+
     // Generate output
-    let commitment_preimage = [pub_key_hash, address_metadata_hash].concat();
+    let commitment_preimage = [addr.as_body(), &metadata_digest_raw].concat();
     let commitment = Sha256::digest(&commitment_preimage);
     let op_return_pre: [u8; 2] = [106, COMMITMENT_SIZE as u8];
     let script = [&op_return_pre[..], commitment.as_slice()].concat();
