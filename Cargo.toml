@@ -14,7 +14,7 @@ bitcoin = "0.23.0"
 bitcoincash-addr = "0.5.1"
 bitcoin_hashes = "0.7.6"
 bytes = "0.5.4"
-cashweb = { git = "https://github.com/cashweb/cashweb-rs" }
+cashweb = "0.1.0-alpha.2"
 clap = { version = "2.33.0", features = ["yaml"] }
 config = "0.10.1"
 dirs = "2.0.2"
@@ -22,7 +22,6 @@ futures = "0.3.4"
 hex = "0.4.2"
 http = "0.2.1"
 hyper = "0.13.5"
-json-rpc = { package = "async-json-rpc", git = "https://github.com/hlb8122/async-json-rpc" }
 lazy_static = "1.4.0"
 log = "0.4.8"
 pretty_env_logger = "0.4.0"

@@ -7,7 +7,7 @@ use rocksdb::Error as RocksError;
 
 use crate::{
     db::Database,
-    models::address_metadata::{Peer, Peers},
+    models::keyserver::{Peer, Peers},
     SETTINGS,
 };
 

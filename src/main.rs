@@ -16,8 +16,8 @@ pub mod monitoring;
 use std::{env, sync::Arc, time::Duration};
 
 use cashweb::{
-    payments::{preprocess_payment, wallet::Wallet},
-    token::schemes::hmac_bearer::HmacTokenScheme,
+    bitcoin_client::BitcoinClient, payments::preprocess_payment,
+    token::schemes::chain_commitment::ChainCommitmentScheme,
 };
 use futures::prelude::*;
 use hyper::client::HttpConnector;
@@ -30,12 +30,13 @@ use warp::{
     Filter,
 };
 
-use crate::bitcoin::BitcoinClient;
 use db::Database;
 use net::{payments, protection};
+use payments::COMMITMENT_PREIMAGE_SIZE;
 use peering::PeerState;
 use settings::Settings;
 
+const COMMIT_PATH: &str = "commit";
 const METADATA_PATH: &str = "keys";
 const PEERS_PATH: &str = "peers";
 pub const PAYMENTS_PATH: &str = "payments";
@@ -75,17 +76,12 @@ async fn main() {
     // Database state
     let db_state = warp::any().map(move || db.clone());
 
-    // Wallet state
-    let wallet = Wallet::new(Duration::from_millis(SETTINGS.payments.timeout));
-    let wallet_state = warp::any().map(move || wallet.clone());
-
-    // Bitcoin client state
+    // Initialize bitcoin client
     let bitcoin_client = BitcoinClient::new(
         SETTINGS.bitcoin_rpc.address.clone(),
         SETTINGS.bitcoin_rpc.username.clone(),
         SETTINGS.bitcoin_rpc.password.clone(),
     );
-    let bitcoin_client_state = warp::any().map(move || bitcoin_client.clone());
 
     // Address string converter
     let addr_base = warp::path::param().and_then(|addr_str: String| async move {
@@ -93,22 +89,26 @@ async fn main() {
     });
 
     // Token generator
-    let key =
-        hex::decode(&SETTINGS.payments.hmac_secret).expect("unable to interpret hmac key as hex");
-    let token_scheme = Arc::new(HmacTokenScheme::new(&key));
+    let token_scheme = Arc::new(ChainCommitmentScheme::from_client(bitcoin_client.clone()));
     let token_scheme_state = warp::any().map(move || token_scheme.clone());
+
+    // Bitcoin client state
+    let bitcoin_client_state = warp::any().map(move || bitcoin_client.clone());
 
     // Protection
     let addr_protected = addr_base
         .clone()
+        .and(warp::body::content_length_limit(
+            SETTINGS.limits.metadata_size,
+        ))
+        .and(warp::body::bytes())
         .and(warp::header::headers_cloned())
         .and(token_scheme_state.clone())
-        .and(wallet_state.clone())
-        .and(bitcoin_client_state.clone())
-        .and_then(move |addr, headers, token_scheme, wallet, bitcoin| {
-            protection::pop_protection(addr, headers, token_scheme, wallet, bitcoin)
+        .and_then(move |addr, body, headers, token_scheme| {
+            protection::pop_protection(addr, body, headers, token_scheme)
                 .map_err(warp::reject::custom)
-        });
+        })
+        .untuple_one();
 
     // Metadata handlers
     let metadata_get = warp::path(METADATA_PATH)
@@ -125,7 +125,6 @@ async fn main() {
         .and(warp::body::content_length_limit(
             SETTINGS.limits.metadata_size,
         ))
-        .and(warp::body::bytes())
         .and(db_state.clone())
         .and_then(move |addr, body, db| {
             net::put_metadata(addr, body, db).map_err(warp::reject::custom)
@@ -136,6 +135,14 @@ async fn main() {
         .and(warp::get())
         .and(peer_state)
         .and_then(move |peer_state| net::get_peers(peer_state).map_err(warp::reject::custom));
+    // Commitment handler
+    let commit = warp::path(COMMIT_PATH)
+        .and(warp::post())
+        .and(warp::body::content_length_limit(
+            COMMITMENT_PREIMAGE_SIZE as u64,
+        ))
+        .and(warp::body::bytes())
+        .and_then(move |body| net::commit(body).map_err(warp::reject::custom));
 
     // Payment handler
     let payments = warp::path(PAYMENTS_PATH)
@@ -150,16 +157,12 @@ async fn main() {
                 .map_err(payments::PaymentError::Preprocess)
                 .map_err(warp::reject::custom)
         })
-        .and(wallet_state.clone())
         .and(bitcoin_client_state.clone())
-        .and(token_scheme_state)
-        .and_then(
-            move |payment, wallet, bitcoin_client, token_state| async move {
-                net::process_payment(payment, wallet, bitcoin_client, token_state)
-                    .await
-                    .map_err(warp::reject::custom)
-            },
-        );
+        .and_then(move |payment, bitcoin_client| async move {
+            net::process_payment(payment, bitcoin_client)
+                .await
+                .map_err(warp::reject::custom)
+        });
 
     // Root handler
     let root = warp::path::end()
@@ -187,6 +190,7 @@ async fn main() {
 
         // Init REST API
         let rest_api = root
+            .or(commit)
             .or(payments)
             .or(metadata_get)
             .or(metadata_put)
@@ -207,6 +211,7 @@ async fn main() {
     {
         // Init REST API
         let rest_api = root
+            .or(commit)
             .or(payments)
             .or(metadata_get)
             .or(metadata_put)
