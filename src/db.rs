@@ -34,7 +34,7 @@ impl Database {
 
     pub fn put_metadata(&self, addr: &[u8], raw_metadata: &[u8]) -> Result<(), RocksError> {
         // Prefix key
-        let key = [addr, &[METADATA_NAMESPACE]].concat();
+        let key = [&[METADATA_NAMESPACE], addr].concat();
 
         self.0.put(key, raw_metadata)
     }

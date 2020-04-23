@@ -7,7 +7,9 @@ use bitcoin::{
     consensus::encode::Error as BitcoinError, util::psbt::serialize::Deserialize, Transaction,
 };
 use bitcoincash_addr::{
-    base58::DecodingError as Base58Error, cashaddr::{DecodingError as CashAddrError, EncodingError as AddrEncodingError}, Address
+    base58::DecodingError as Base58Error,
+    cashaddr::{DecodingError as CashAddrError, EncodingError as AddrEncodingError},
+    Address,
 };
 use cashweb::bitcoin_client::{BitcoinClient, HttpConnector, NodeError};
 use cashweb::{
@@ -18,12 +20,15 @@ use cashweb::{
 use prost::Message as _;
 use sha2::{Digest, Sha256};
 use warp::{
-    http::{header::{AUTHORIZATION, LOCATION}, Response},
+    http::{
+        header::{AUTHORIZATION, LOCATION},
+        Response,
+    },
     hyper::Body,
     reject::Reject,
 };
 
-use super::{IntoResponse, address_decode};
+use super::{address_decode, IntoResponse};
 use crate::{
     models::bip70::{Output, Payment},
     PAYMENTS_PATH, SETTINGS,
@@ -41,7 +46,7 @@ pub enum PaymentError {
     MissingMerchantData,
     Node(NodeError),
     IncorrectLengthPreimage,
-    Address(AddrEncodingError)
+    Address(AddrEncodingError),
 }
 
 impl fmt::Display for PaymentError {
@@ -139,6 +144,7 @@ pub async fn process_payment(
                 .map(|vout| {
                     let mut tx_id = tx.txid().to_vec();
                     tx_id.reverse();
+                    println!("found tx id {} vout {}", hex::encode(&tx_id), vout);
                     (tx_id, vout)
                 })
         })
@@ -153,7 +159,7 @@ pub async fn process_payment(
     }
 
     // Construct token
-    let token = construct_token(&tx_id, vout as u32);
+    let token = format!("POP {}", construct_token(&tx_id, vout as u32));
 
     // Create PaymentAck
     let memo = Some(SETTINGS.payments.memo.clone());
@@ -176,7 +182,7 @@ pub enum PaymentRequestError {
     Address(CashAddrError, Base58Error),
     Node(NodeError),
     UnepxectedNetwork,
-    Hex(hex::FromHexError)
+    Hex(hex::FromHexError),
 }
 
 impl fmt::Display for PaymentRequestError {
@@ -213,15 +219,15 @@ impl IntoResponse for PaymentRequestError {
 #[derive(Debug, Deserialize)]
 pub struct CommitQuery {
     address: String,
-    metadata_digest: String
+    metadata_digest: String,
 }
 
-pub async fn commit(
-    query: CommitQuery
-) -> Result<Response<Body>, PaymentRequestError> {
+pub async fn commit(query: CommitQuery) -> Result<Response<Body>, PaymentRequestError> {
     // Parse query
-    let addr = address_decode(&query.address).map_err(|err| PaymentRequestError::Address(err.0, err.1))?;
-    let metadata_digest_raw = hex::decode(query.metadata_digest).map_err(PaymentRequestError::Hex)?; 
+    let addr =
+        address_decode(&query.address).map_err(|err| PaymentRequestError::Address(err.0, err.1))?;
+    let metadata_digest_raw =
+        hex::decode(query.metadata_digest).map_err(PaymentRequestError::Hex)?;
 
     // Generate output
     let commitment_preimage = [addr.as_body(), &metadata_digest_raw].concat();

@@ -14,7 +14,7 @@ bitcoin = "0.23.0"
 bitcoincash-addr = "0.5.1"
 bitcoin_hashes = "0.7.6"
 bytes = "0.5.4"
-cashweb = "0.1.0-alpha.2"
+cashweb = "0.1.0-alpha.3"
 clap = { version = "2.33.0", features = ["yaml"] }
 config = "0.10.1"
 dirs = "2.0.2"

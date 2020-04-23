@@ -107,8 +107,9 @@ outputs = [
 
 # Create tx
 raw_tx_unsigned = rpc_connection.createrawtransaction(inputs, outputs)
+signed_tx = rpc_connection.signrawtransactionwithwallet(raw_tx_unsigned)
 signed_raw_tx = bytes.fromhex(
-    rpc_connection.signrawtransactionwithwallet(raw_tx_unsigned)["hex"])
+    signed_tx["hex"])
 
 # Construct payment message
 payment = Payment(merchant_data=payment_details.merchant_data,
@@ -133,8 +134,6 @@ token_header = response.headers["Authorization"]
 # Put metadata using payment token
 response = requests.put(url=BASE_URL + redirect_url, data=raw_addr_meta, headers={
                         "Authorization": token_header})
-
-sleep(3)
 
 # Get metadata
 response = requests.get(url=BASE_URL + "/keys/" + key_addr)

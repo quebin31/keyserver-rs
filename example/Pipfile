@@ -10,7 +10,6 @@ python-bitcoinlib = "*"
 requests = "*"
 protobuf = "*"
 python-bitcoinrpc = "*"
-hashlib = "*"
 
 [requires]
 python_version = "3.7"
