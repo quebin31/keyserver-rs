@@ -91,8 +91,6 @@ pub fn measure(info: Info) {
     // Observe duration
     let duration_secs = info.elapsed().as_secs_f64();
     HTTP_ELAPSED.get(method).get(route).observe(duration_secs);
-
-    println!("observed");
 }
 
 pub fn export() -> Vec<u8> {

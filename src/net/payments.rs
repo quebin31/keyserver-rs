@@ -31,7 +31,7 @@ use warp::{
 use super::{address_decode, IntoResponse};
 use crate::{
     models::bip70::{Output, Payment},
-    PAYMENTS_PATH, SETTINGS,
+    METADATA_PATH, PAYMENTS_PATH, SETTINGS,
 };
 
 pub const COMMITMENT_PREIMAGE_SIZE: usize = 20 + 32;
@@ -144,7 +144,6 @@ pub async fn process_payment(
                 .map(|vout| {
                     let mut tx_id = tx.txid().to_vec();
                     tx_id.reverse();
-                    println!("found tx id {} vout {}", hex::encode(&tx_id), vout);
                     (tx_id, vout)
                 })
         })
@@ -170,7 +169,7 @@ pub async fn process_payment(
     payment_ack.encode(&mut raw_ack).unwrap();
 
     Ok(Response::builder()
-        .header(LOCATION, format!("/keys/{}", addr_str))
+        .header(LOCATION, format!("/{}/{}", METADATA_PATH, addr_str))
         .header(AUTHORIZATION, token)
         .body(Body::from(raw_ack))
         .unwrap())
