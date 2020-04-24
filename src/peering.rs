@@ -1,15 +1,87 @@
-use std::{collections::HashSet, convert::TryFrom};
+use std::{
+    collections::{HashSet, VecDeque},
+    convert::TryFrom,
+};
 
-use http::uri::InvalidUri;
-use hyper::{body::aggregate, client::connect::Connect, Body, Client, Error as HyperError, Uri};
+use bytes::Bytes;
+use dashmap::DashMap;
+use http::{header::AUTHORIZATION, uri::InvalidUri};
+use hyper::{
+    body::aggregate, client::connect::Connect, Body, Client, Error as HyperError, Request, Uri,
+};
 use prost::{DecodeError, Message as _};
+use rand::{seq::SliceRandom, thread_rng};
 use rocksdb::Error as RocksError;
+use tokio::sync::RwLock;
 
 use crate::{
     db::Database,
     models::keyserver::{Peer, Peers},
     SETTINGS,
 };
+
+const BLOCK_BUFFER: usize = 8;
+const SAMPLE_SIZE: usize = 4;
+
+pub struct TokenCache {
+    tokens_blocks: RwLock<VecDeque<DashMap<Vec<u8>, String>>>,
+    db: Database,
+}
+
+impl TokenCache {
+    pub fn new(db: Database) -> Self {
+        let deque = VecDeque::from(vec![Default::default(); BLOCK_BUFFER]);
+        Self {
+            tokens_blocks: RwLock::new(deque),
+            db,
+        }
+    }
+
+    pub async fn add_token(&self, addr: Vec<u8>, token: String) {
+        let token_blocks = self.tokens_blocks.read().await;
+        // TODO: Check previous blocks?
+        // TODO: Check consistency garauntees of the dashmap under iter + insert
+        token_blocks.front().unwrap().insert(addr, token); // TODO: Double check this is safe
+    }
+
+    pub async fn broadcast_block<C>(&self, peers: &Peers, client: PeeringClient<C>)
+    where
+        C: Clone + Send + Sync,
+        C: Connect + 'static,
+    {
+        let mut token_blocks = self.tokens_blocks.write().await;
+
+        // Cycle blocks
+        token_blocks.push_front(Default::default());
+        let token_block = match token_blocks.pop_back() {
+            Some(some) => some,
+            None => return,
+        };
+
+        // Sample peers
+        let mut rng = thread_rng();
+        let peer_choices: Vec<_> = peers
+            .peers
+            .choose_multiple(&mut rng, SAMPLE_SIZE)
+            .cloned()
+            .collect();
+
+        for (addr, token) in token_block.into_iter() {
+            let metadata = match self.db.get_raw_metadata(&addr) {
+                Ok(Some(some)) => some,
+                _ => continue,
+            };
+            let metadata = Bytes::from(metadata);
+            for peer in &peer_choices {
+                client
+                    .put_metadata(&peer.url, metadata.clone(), &token)
+                    .await;
+                // TODO: Make this non-blocking
+                // TODO: Error handling -> remove as peer
+            }
+        }
+    }
+}
 
 pub struct PeerState<C> {
     peers: Peers,
@@ -135,5 +207,20 @@ where
             .flatten()
             .collect();
         new_urls
+    }
+
+    pub async fn put_metadata(
+        &self,
+        url: &str,
+        metadata: Bytes,
+        token: &str,
+    ) -> Result<(), HyperError> {
+        let uri = Uri::try_from(url).unwrap(); // TODO: Make this safe
+        let request = Request::put(uri)
+            .header(AUTHORIZATION, token)
+            .body(Body::from(metadata))
+            .unwrap();
+        self.client.request(request).await?;
+        Ok(())
     }
 }
