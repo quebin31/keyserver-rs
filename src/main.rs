@@ -24,7 +24,6 @@ use hyper::client::HttpConnector;
 use lazy_static::lazy_static;
 #[cfg(feature = "monitoring")]
 use prometheus::{Encoder, TextEncoder};
-use tokio::sync::RwLock;
 use warp::{
     http::{header, Method},
     Filter,
@@ -32,7 +31,7 @@ use warp::{
 
 use db::Database;
 use net::{payments, protection};
-use peering::PeerState;
+use peering::{PeerHandler, TokenCache};
 use settings::Settings;
 
 const COMMIT_PATH: &str = "commit";
@@ -55,22 +54,69 @@ async fn main() {
     // Initialize database
     let db = Database::try_new(&SETTINGS.db_path).expect("failed to open database");
 
-    // Initialize peering
+    // Fetch peers from settings
+    let peers_settings: Vec<_> = SETTINGS
+        .peering
+        .peers
+        .clone();
+
+    // Retrieve saved peers from database
     let peers_opt = db.get_peers().unwrap(); // Unrecoverable
-    let peers = peers_opt.unwrap_or_default();
+    let peers_db: std::collections::HashSet<String> = peers_opt
+        .unwrap_or_default()
+        .peers
+        .into_iter()
+        .map(|peer| peer.url)
+        .collect();
+
+    // Combine collected peers
+    let mut peers = peers_db;
+    for peer in peers_settings.into_iter() {
+        peers.insert(peer);
+    }
+
+    // Setup peer connector
     let mut connector = HttpConnector::new();
-    connector.set_keepalive(Some(Duration::from_secs(30)));
-    connector.set_connect_timeout(Some(Duration::from_secs(60)));
-    let mut peer_state = PeerState::new(peers, connector);
+    connector.set_keepalive(Some(Duration::from_secs(SETTINGS.peering.keep_alive)));
+    connector.set_connect_timeout(Some(Duration::from_secs(SETTINGS.peering.timeout)));
+
+    // Setup peer state
+    let mut peer_state = PeerHandler::new(peers, connector);
     let new_peers = peer_state.traverse().await;
-    peer_state.set_peers(new_peers);
-    if let Err(err) = peer_state.persist(&db) {
+    peer_state.set_peers(new_peers).await;
+
+    // Persist peers
+    if let Err(err) = peer_state.persist(&db).await {
         log::error!("failed to persist new peer state; {}", err);
     }
 
+    // Token cache
+    let token_cache = TokenCache::new();
+
+    // Setup ZMQ stream
+    let mut subscriber = async_zmq::subscribe(&SETTINGS.bitcoin_rpc.zmq_address)
+        .unwrap()
+        .connect()
+        .unwrap();
+    subscriber.set_subscribe("hashblock").unwrap(); // Unrecoverable
+
+    // Start broadcast heartbeat
+    let token_cache_inner = token_cache.clone();
+    let peer_state_inner = peer_state.clone();
+    let db_inner = db.clone();
+    let broadcast_heartbeat = || async move {
+        while let Some(val) = subscriber.next().await {
+            if let Ok(_) = val {
+                token_cache_inner
+                    .broadcast_block(&peer_state_inner, &db_inner)
+                    .await;
+            }
+        }
+    };
+    tokio::spawn(broadcast_heartbeat());
+
     // Peer state
-    let shared_peering = Arc::new(RwLock::new(peer_state));
-    let peer_state = warp::any().map(move || shared_peering.clone());
+    let peer_state = warp::any().map(move || peer_state.clone());
 
     // Database state
     let db_state = warp::any().map(move || db.clone());
@@ -90,6 +136,9 @@ async fn main() {
     // Token generator
     let token_scheme = Arc::new(ChainCommitmentScheme::from_client(bitcoin_client.clone()));
     let token_scheme_state = warp::any().map(move || token_scheme.clone());
+
+    // Token cache state
+    let token_cache_state = warp::any().map(move || token_cache.clone());
 
     // Bitcoin client state
     let bitcoin_client_state = warp::any().map(move || bitcoin_client.clone());
@@ -125,8 +174,9 @@ async fn main() {
             SETTINGS.limits.metadata_size,
         ))
         .and(db_state.clone())
-        .and_then(move |addr, body, db| {
-            net::put_metadata(addr, body, db).map_err(warp::reject::custom)
+        .and(token_cache_state)
+        .and_then(move |addr, body, token, db, token_cache| {
+            net::put_metadata(addr, body, token, db, token_cache).map_err(warp::reject::custom)
         });
 
     // Peer handler

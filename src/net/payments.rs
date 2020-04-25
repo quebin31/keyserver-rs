@@ -122,7 +122,6 @@ pub async fn process_payment(
 
     let expected_commitment = construct_commitment(pub_key_hash, address_metadata_hash);
 
-    log::info!("expected: {}", hex::encode(&expected_commitment));
     let (tx_id, vout) = txs
         .iter()
         .find_map(|tx| {

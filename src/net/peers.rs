@@ -1,11 +1,10 @@
-use std::{fmt, sync::Arc};
+use std::fmt;
 
 use rocksdb::Error as RocksError;
-use tokio::sync::RwLock;
 use warp::{http::Response, hyper::Body, reject::Reject};
 
 use super::IntoResponse;
-use crate::{peering::PeerState, SETTINGS};
+use crate::{peering::PeerHandler, SETTINGS};
 
 #[derive(Debug)]
 pub enum PeerError {
@@ -40,13 +39,11 @@ impl IntoResponse for PeerError {
     }
 }
 
-pub async fn get_peers<C>(
-    peer_state: Arc<RwLock<PeerState<C>>>,
-) -> Result<Response<Body>, PeerError> {
+pub async fn get_peers<C>(peer_handler: PeerHandler<C>) -> Result<Response<Body>, PeerError> {
     if !SETTINGS.peering.enabled {
         return Err(PeerError::Unavailable);
     }
 
-    let raw_peers = peer_state.read().await.get_raw_peers();
+    let raw_peers = peer_handler.get_raw_peers().await;
     Ok(Response::builder().body(Body::from(raw_peers)).unwrap()) // TODO: Headers
 }

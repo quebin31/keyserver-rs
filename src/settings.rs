@@ -21,6 +21,12 @@ const DEFAULT_TOKEN_FEE: u64 = 100_000;
 const DEFAULT_MEMO: &str = "Thanks for your custom!";
 const DEFAULT_MAX_PEERS: u32 = 128;
 const DEFAULT_PEERING: bool = true;
+const DEFAULT_ZMQ_ADDRESS: &str = "tcp://127.0.0.1:28332";
+const DEFAULT_PEERS: &[String] = &[];
+const DEFAULT_PEER_TIMEOUT: u64 = 60_000;
+const DEFAULT_PEER_KEEP_ALIVE: u64 = 30_000;
+const DEFAULT_PEER_BROADCAST_DELAY: usize = 2;
+const DEFAULT_PEER_FAN_SIZE: usize = 4;
 
 #[cfg(feature = "monitoring")]
 const DEFAULT_BIND_PROM: &str = "127.0.0.1:9095";
@@ -30,6 +36,7 @@ pub struct BitcoinRpc {
     pub address: String,
     pub username: String,
     pub password: String,
+    pub zmq_address: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -55,6 +62,11 @@ pub struct Websocket {
 pub struct Peering {
     pub enabled: bool,
     pub max_peers: u32,
+    pub timeout: u64,
+    pub keep_alive: u64,
+    pub fan_size: usize,
+    pub broadcast_delay: usize,
+    pub peers: Vec<String>,
 }
 
 #[derive(Debug, Deserialize)]
@@ -94,21 +106,35 @@ impl Settings {
         let mut default_db = home_dir.clone();
         default_db.push(format!("{}/db", FOLDER_DIR));
         s.set_default("db_path", default_db.to_str())?;
+
         s.set_default("bitcoin_rpc.address", DEFAULT_RPC_ADDR)?;
         s.set_default("bitcoin_rpc.username", DEFAULT_RPC_USER)?;
         s.set_default("bitcoin_rpc.password", DEFAULT_RPC_PASSWORD)?;
+        s.set_default("bitcoin_rpc.zmq_address", DEFAULT_ZMQ_ADDRESS)?;
+
         s.set_default("limits.metadata_size", DEFAULT_METADATA_LIMIT as i64)?;
         s.set_default("limits.payment_size", DEFAULT_PAYMENT_LIMIT as i64)?;
+
         s.set_default("payments.token_fee", DEFAULT_TOKEN_FEE as i64)?;
         s.set_default("payments.memo", DEFAULT_MEMO)?;
         s.set_default("payments.timeout", DEFAULT_PAYMENT_TIMEOUT as i64)?;
+
+        s.set_default("peering.enabled", DEFAULT_PEERING)?;
+        s.set_default("peering.max_peers", DEFAULT_MAX_PEERS as i64)?;
+        s.set_default("peering.timeout", DEFAULT_PEER_TIMEOUT as i64)?;
+        s.set_default("peering.keep_alive", DEFAULT_PEER_KEEP_ALIVE as i64)?;
+        s.set_default("peering.peers", DEFAULT_PEERS.to_vec())?;
+        s.set_default("peering.fan_size", DEFAULT_PEER_FAN_SIZE as i64)?;
+        s.set_default(
+            "peering.broadcast_delay",
+            DEFAULT_PEER_BROADCAST_DELAY as i64,
+        )?;
+
+        s.set_default("websocket.ping_interval", DEFAULT_PING_INTERVAL as i64)?;
         s.set_default(
             "websocket.truncation_length",
             DEFAULT_TRUNCATION_LENGTH as i64,
         )?;
-        s.set_default("websocket.ping_interval", DEFAULT_PING_INTERVAL as i64)?;
-        s.set_default("peering.enabled", DEFAULT_PEERING)?;
-        s.set_default("peering.max_peers", DEFAULT_MAX_PEERS as i64)?;
 
         // NOTE: Don't set HMAC key to a default during release for security reasons
         #[cfg(debug_assertions)]
@@ -156,6 +182,11 @@ impl Settings {
         // Set rpc password from cmd line
         if let Some(rpc_password) = matches.value_of("rpc-password") {
             s.set("bitcoin_rpc.password", rpc_password)?;
+        }
+
+        // Set ZMQ address from cmd line
+        if let Some(rpc_password) = matches.value_of("rpc-password") {
+            s.set("bitcoin_rpc.zmq_address", rpc_password)?;
         }
 
         // Set secret from cmd line
