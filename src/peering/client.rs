@@ -1,7 +1,7 @@
 use std::{collections::HashSet, str::FromStr};
 
 use bytes::Bytes;
-use http::{header::AUTHORIZATION, uri::InvalidUri};
+use http::{header::AUTHORIZATION, header::MAX_FORWARDS, uri::InvalidUri};
 use hyper::{
     body::aggregate, client::connect::Connect, Body, Client, Error as HyperError, Request, Uri,
 };
@@ -17,6 +17,7 @@ pub enum PeerError {
     Hyper(HyperError),
     Decode(DecodeError),
     Uri(InvalidUri),
+    NotFound,
 }
 
 impl From<HyperError> for PeerError {
@@ -45,14 +46,31 @@ where
         let response = self.0.get(uri).await?;
         let raw = aggregate(response.into_body()).await?;
         let peers = Peers::decode(raw).map_err(PeerError::Decode)?;
-        Ok(peers
-            .peers
-            .into_iter()
-            .map(|peer| peer.url)
-            .collect())
+        Ok(peers.peers.into_iter().map(|peer| peer.url).collect())
     }
 
-    pub async fn get_fan(&self, url_set: &HashSet<String>) -> HashSet<String> {
+    pub async fn get_metadata(&self, url: &str, addr: &str) -> Result<impl bytes::Buf, PeerError> {
+        let url = format!("{}/{}/{}", url, METADATA_PATH, addr);
+        let uri = Uri::from_str(&url)?;
+        let request = Request::get(uri)
+            .header(MAX_FORWARDS, 0)
+            .body(Body::empty())
+            .unwrap(); // This is safe
+        let response = self.0.request(request).await?;
+        let raw_metadata = aggregate(response.into_body()).await?;
+        Ok(raw_metadata)
+    }
+
+    pub async fn get_metadata_fan(&self, addr: &str, url_set: &[String]) -> Vec<impl bytes::Buf> {
+        let fan = url_set.iter().map(|url| self.get_metadata(url, addr));
+        futures::future::join_all(fan)
+            .await
+            .into_iter()
+            .filter_map(|urls| urls.ok())
+            .collect()
+    }
+
+    pub async fn get_peer_fan(&self, url_set: &HashSet<String>) -> HashSet<String> {
         let fan = url_set.iter().map(|url| self.get_peers(url.clone()));
         let new_urls: HashSet<_> = futures::future::join_all(fan)
             .await

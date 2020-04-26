@@ -39,8 +39,3 @@ args:
         long: network
         help: Bitcoin network
         takes_value: true
-    - secret:
-        short: h
-        long: hmac-secret
-        help: HMAC secret
-        takes_value: true

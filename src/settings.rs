@@ -49,7 +49,6 @@ pub struct Payment {
     pub timeout: u64,
     pub token_fee: u64,
     pub memo: String,
-    pub hmac_secret: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -136,12 +135,6 @@ impl Settings {
             DEFAULT_TRUNCATION_LENGTH as i64,
         )?;
 
-        // NOTE: Don't set HMAC key to a default during release for security reasons
-        #[cfg(debug_assertions)]
-        {
-            s.set_default("payments.hmac_secret", "1234")?;
-        }
-
         // Load config from file
         let mut default_config = home_dir;
         default_config.push(format!("{}/config", FOLDER_DIR));
@@ -187,11 +180,6 @@ impl Settings {
         // Set ZMQ address from cmd line
         if let Some(rpc_password) = matches.value_of("rpc-password") {
             s.set("bitcoin_rpc.zmq_address", rpc_password)?;
-        }
-
-        // Set secret from cmd line
-        if let Some(hmac_secret) = matches.value_of("hmac-secret") {
-            s.set("payments.hmac_secret", hmac_secret)?;
         }
 
         s.try_into()

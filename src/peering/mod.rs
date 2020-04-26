@@ -6,8 +6,10 @@ pub use token_cache::*;
 
 use std::{collections::HashSet, sync::Arc};
 
-use hyper::{client::connect::Connect};
+use bytes::Buf;
+use hyper::client::connect::Connect;
 use prost::Message as _;
+use rand::{rngs::OsRng, seq::IteratorRandom};
 use rocksdb::Error as RocksError;
 use tokio::sync::RwLock;
 
@@ -42,7 +44,7 @@ where
 
         loop {
             // Fan out and find peers
-            let found_urls = self.client.get_fan(&new_urls).await;
+            let found_urls = self.client.get_peer_fan(&new_urls).await;
 
             // New distinct URLs
             new_urls = found_urls.difference(&current_urls).cloned().collect();
@@ -67,6 +69,26 @@ where
         }
 
         current_urls
+    }
+
+    pub async fn sample_peer_metadata(&self, addr: &str) -> Result<Vec<u8>, PeerError> {
+        let sample = self.sample().await;
+        let mut metadata_fan = self.client.get_metadata_fan(addr, &sample).await;
+        let raw_metadata = metadata_fan.pop().ok_or(PeerError::NotFound)?;
+        // let metadata = AddressMetadata::decode(raw_metadata).map_err(PeerError::Decode)?;
+        Ok(raw_metadata.bytes().to_vec())
+    }
+
+    pub async fn sample(&self) -> Vec<String> {
+        // Sample peers
+        self.peers
+            .read()
+            .await
+            .iter()
+            .choose_multiple(&mut OsRng, SETTINGS.peering.fan_size)
+            .iter()
+            .map(|url| url.to_string())
+            .collect()
     }
 }
 

@@ -49,7 +49,9 @@ impl TokenCache {
         let client = peer_state.client.clone();
 
         // Sample peers
-        let url_choices: Vec<_> = peers.iter().choose_multiple(&mut OsRng, SETTINGS.peering.fan_size);
+        let url_choices: Vec<_> = peers
+            .iter()
+            .choose_multiple(&mut OsRng, SETTINGS.peering.fan_size);
 
         for (addr, token) in token_block.into_iter() {
             let metadata = match db.get_raw_metadata(addr.as_body()) {
@@ -61,8 +63,11 @@ impl TokenCache {
             for url in &url_choices {
                 // TODO: Make this non-blocking
                 log::info!("{}", url);
-                
-                if let Err(err) = client.put_metadata(&url, &addr_str, metadata.clone(), &token).await {
+
+                if let Err(err) = client
+                    .put_metadata(&url, &addr_str, metadata.clone(), &token)
+                    .await
+                {
                     log::error!("{:?}", err);
                     // TODO: Error handling -> remove as peer
                 }

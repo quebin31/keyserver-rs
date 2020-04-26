@@ -55,10 +55,7 @@ async fn main() {
     let db = Database::try_new(&SETTINGS.db_path).expect("failed to open database");
 
     // Fetch peers from settings
-    let peers_settings: Vec<_> = SETTINGS
-        .peering
-        .peers
-        .clone();
+    let peers_settings: Vec<_> = SETTINGS.peering.peers.clone();
 
     // Retrieve saved peers from database
     let peers_opt = db.get_peers().unwrap(); // Unrecoverable
@@ -81,12 +78,12 @@ async fn main() {
     connector.set_connect_timeout(Some(Duration::from_secs(SETTINGS.peering.timeout)));
 
     // Setup peer state
-    let mut peer_state = PeerHandler::new(peers, connector);
-    let new_peers = peer_state.traverse().await;
-    peer_state.set_peers(new_peers).await;
+    let mut peer_handler = PeerHandler::new(peers, connector);
+    let new_peers = peer_handler.traverse().await;
+    peer_handler.set_peers(new_peers).await;
 
     // Persist peers
-    if let Err(err) = peer_state.persist(&db).await {
+    if let Err(err) = peer_handler.persist(&db).await {
         log::error!("failed to persist new peer state; {}", err);
     }
 
@@ -102,13 +99,13 @@ async fn main() {
 
     // Start broadcast heartbeat
     let token_cache_inner = token_cache.clone();
-    let peer_state_inner = peer_state.clone();
+    let peer_handler_inner = peer_handler.clone();
     let db_inner = db.clone();
     let broadcast_heartbeat = || async move {
         while let Some(val) = subscriber.next().await {
             if let Ok(_) = val {
                 token_cache_inner
-                    .broadcast_block(&peer_state_inner, &db_inner)
+                    .broadcast_block(&peer_handler_inner, &db_inner)
                     .await;
             }
         }
@@ -116,7 +113,7 @@ async fn main() {
     tokio::spawn(broadcast_heartbeat());
 
     // Peer state
-    let peer_state = warp::any().map(move || peer_state.clone());
+    let peer_handler = warp::any().map(move || peer_handler.clone());
 
     // Database state
     let db_state = warp::any().map(move || db.clone());
@@ -163,9 +160,11 @@ async fn main() {
         .and(addr_base)
         .and(warp::get())
         .and(warp::query())
+        .and(warp::header::headers_cloned())
         .and(db_state.clone())
-        .and_then(move |addr, query, db| {
-            net::get_metadata(addr, query, db).map_err(warp::reject::custom)
+        .and(peer_handler.clone())
+        .and_then(move |addr, query, headers, db, peer_handler| {
+            net::get_metadata(addr, query, headers, db, peer_handler).map_err(warp::reject::custom)
         });
     let metadata_put = warp::path(METADATA_PATH)
         .and(addr_protected)
@@ -182,8 +181,9 @@ async fn main() {
     // Peer handler
     let peers_get = warp::path(PEERS_PATH)
         .and(warp::get())
-        .and(peer_state)
-        .and_then(move |peer_state| net::get_peers(peer_state).map_err(warp::reject::custom));
+        .and(peer_handler)
+        .and_then(move |peer_handler| net::get_peers(peer_handler).map_err(warp::reject::custom));
+
     // Commitment handler
     let commit = warp::path(COMMIT_PATH)
         .and(warp::post())
