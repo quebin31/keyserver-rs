@@ -118,8 +118,6 @@ pub async fn put_metadata(
     db_data: Database,
     token_cache: TokenCache,
 ) -> Result<Response<Body>, MetadataError> {
-    // let addr_raw = Bytes::from(addr.into_body());
-
     // Decode metadata
     let metadata =
         AuthWrapper::decode(metadata_raw.clone()).map_err(MetadataError::MetadataDecode)?;
