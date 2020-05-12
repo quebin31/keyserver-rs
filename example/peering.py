@@ -24,7 +24,8 @@ from time import time, sleep
 # Run the keyserver
 # cargo run
 
-BASE_URL = "http://0.0.0.0:8080"
+BASE_URL_A = "http://0.0.0.0:8082"
+BASE_URL_B = "http://0.0.0.0:8081"
 bitcoin.SelectParams("regtest")
 
 # Init Bitcoin RPC
@@ -61,8 +62,9 @@ auth_wrapper = AuthWrapper(
 raw_addr_meta = auth_wrapper.SerializeToString()
 
 # Commit
+print("Getting PaymentRequest...")
 metadata_digest = sha256(raw_addr_meta).digest().hex()
-response = requests.post(url=BASE_URL + "/commit", params={
+response = requests.post(url=BASE_URL_A + "/commit", params={
     'address': key_addr,
     'metadata_digest': metadata_digest
 })
@@ -72,6 +74,7 @@ assert(response.status_code == 402)  # Payment required
 payment_request = PaymentRequest.FromString(response.content)
 payment_details_raw = payment_request.serialized_payment_details
 payment_details = PaymentDetails.FromString(payment_details_raw)
+print("Received PaymentRequest")
 
 # Payment amount
 burn_amount = Decimal(100_000) / 1_00_000_000
@@ -114,9 +117,10 @@ signed_raw_tx = bytes.fromhex(
 payment = Payment(merchant_data=payment_details.merchant_data,
                   transactions=[signed_raw_tx])
 payment_raw = payment.SerializeToString()
+print("Sending Payment...")
 
 # Send payment
-payment_url = BASE_URL + payment_details.payment_url
+payment_url = BASE_URL_A + payment_details.payment_url
 headers = {
     "Content-Type": "application/bitcoincash-payment",
     "Accept": "application/bitcoincash-paymentack"
@@ -124,17 +128,24 @@ headers = {
 response = requests.post(url=payment_url, data=payment_raw,
                          headers=headers, allow_redirects=False)
 payment_ack = PaymentACK.FromString(response.content)
-print("PaymentACK memo:", payment_ack.memo)
+print("Received PaymentACk")
 
 # Token URL for PUT
 redirect_url = response.headers["Location"]
 token_header = response.headers["Authorization"]
 
 # Put metadata using payment token
-response = requests.put(url=BASE_URL + redirect_url, data=raw_addr_meta, headers={
+response = requests.put(url=BASE_URL_A + redirect_url, data=raw_addr_meta, headers={
                         "Authorization": token_header})
+print("Pushed payment to", BASE_URL_A + "/keys/" + key_addr)
 
 # Get metadata
-response = requests.get(url=BASE_URL + "/keys/" + key_addr)
+response = requests.get(url=BASE_URL_A + "/keys/" + key_addr)
 addr_metadata = AuthWrapper.FromString(response.content)
-print(addr_metadata)
+print("Got payment from", BASE_URL_A + "/keys/" + key_addr)
+input()
+
+# Get metadata from peer
+response = requests.get(url=BASE_URL_B + "/keys/" + key_addr)
+addr_metadata = AuthWrapper.FromString(response.content)
+print("Got payment from", BASE_URL_B + "/keys/" + key_addr)
