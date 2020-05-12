@@ -86,8 +86,8 @@ where
             .await
             .iter()
             .choose_multiple(&mut OsRng, SETTINGS.peering.fan_size)
-            .iter()
-            .map(|url| url.to_string())
+            .into_iter()
+            .map(move |url| url.to_string())
             .collect()
     }
 }

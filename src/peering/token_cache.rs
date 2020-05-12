@@ -15,14 +15,16 @@ pub struct TokenCache {
     tokens_blocks: Arc<RwLock<VecDeque<DashMap<Address, String>>>>,
 }
 
-impl TokenCache {
-    pub fn new() -> Self {
+impl Default for TokenCache {
+    fn default() -> Self {
         let deque = VecDeque::from(vec![Default::default(); SETTINGS.peering.broadcast_delay]);
         Self {
             tokens_blocks: Arc::new(RwLock::new(deque)),
         }
     }
+}
 
+impl TokenCache {
     pub async fn add_token(&self, addr: Address, token: String) {
         let token_blocks = self.tokens_blocks.read().await;
         // TODO: Check previous blocks?
