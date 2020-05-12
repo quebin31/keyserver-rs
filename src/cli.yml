@@ -26,6 +26,10 @@ args:
         long: rpc-password
         help: Bitcoin RPC password
         takes_value: true
+    - zmq-addr:
+        long: zmq-address
+        help: Bitcoin ZMQ address
+        takes_value: true
     - db-path:
         short: d
         long: db-path
@@ -34,9 +38,4 @@ args:
     - network:
         long: network
         help: Bitcoin network
-        takes_value: true
-    - secret:
-        short: h
-        long: hmac-secret
-        help: HMAC secret
         takes_value: true

@@ -1,9 +1,11 @@
 pub mod metadata;
 pub mod payments;
+pub mod peers;
 pub mod protection;
 
 pub use metadata::*;
 pub use payments::*;
+pub use peers::*;
 pub use protection::*;
 
 use std::{convert::Infallible, fmt};
@@ -73,6 +75,17 @@ pub async fn handle_rejection(err: Rejection) -> Result<Response<Body>, Infallib
         log::error!("{:#?}", err);
         return Ok(err.into_response());
     }
+
+    if let Some(err) = err.find::<PaymentRequestError>() {
+        log::error!("{:#?}", err);
+        return Ok(err.into_response());
+    }
+
+    if let Some(err) = err.find::<PeerError>() {
+        log::error!("{:#?}", err);
+        return Ok(err.into_response());
+    }
+
     if let Some(err) = err.find::<ProtectionError>() {
         log::error!("{:#?}", err);
         return Ok(protection_error_recovery(err).await);

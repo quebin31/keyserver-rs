@@ -106,6 +106,13 @@ memo = "Thanks for your custom!"
 # NOTE: This will not be given a default value in release compilation due to security considerations.
 hmac_secret = "1234"
 
+[peering]
+# Whether peering should be enabled
+enabled = true
+
+# Maximum number of peers
+max_peers = 128
+
 ```
 
 ### Running

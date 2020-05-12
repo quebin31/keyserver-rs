@@ -2,6 +2,8 @@ use std::fmt;
 
 use bitcoincash_addr::Address;
 use bytes::Bytes;
+use http::header::{HeaderMap, HeaderValue, MAX_FORWARDS};
+use hyper::client::connect::Connect;
 use prost::Message as _;
 use rocksdb::Error as RocksError;
 use secp256k1::{key::PublicKey, Error as SecpError, Message, Secp256k1, Signature};
@@ -10,7 +12,9 @@ use tokio::task;
 use warp::{http::Response, hyper::Body, reject::Reject};
 
 use super::IntoResponse;
-use crate::{db::Database, models::wrapper::AuthWrapper};
+use crate::{
+    db::Database, models::wrapper::AuthWrapper, peering::PeerHandler, peering::TokenCache,
+};
 
 #[derive(Debug)]
 pub enum MetadataError {
@@ -64,20 +68,36 @@ impl IntoResponse for MetadataError {
     }
 }
 
-pub async fn get_metadata(
+pub async fn get_metadata<C>(
     addr: Address,
     query: Query,
+    headers: HeaderMap,
     database: Database,
-) -> Result<Response<Body>, MetadataError> {
+    peer_handler: PeerHandler<C>,
+) -> Result<Response<Body>, MetadataError>
+where
+    C: Clone + Send + Sync,
+    C: Connect + 'static,
+{
     // Get metadata
-    let metadata = task::spawn_blocking(move || database.get_metadata(addr.as_body()))
-        .await
-        .unwrap()?
-        .ok_or(MetadataError::NotFound)?;
+    let raw_metadata = match database.get_raw_metadata(addr.as_body()) {
+        Ok(Some(some)) => some,
+        Ok(None) => {
+            // If MAX_FORWARDS is 0 then don't sample peers
+            if headers.get(MAX_FORWARDS) == Some(&HeaderValue::from(0)) {
+                return Err(MetadataError::NotFound);
+            }
 
-    // Serialize messages
-    let mut raw_metadata = Vec::with_capacity(metadata.encoded_len());
-    metadata.encode(&mut raw_metadata).unwrap();
+            let addr_str = addr.encode().unwrap();
+            let sampled = peer_handler.sample_peer_metadata(&addr_str).await;
+            if let Ok(metadata) = sampled {
+                metadata
+            } else {
+                return Err(MetadataError::NotFound);
+            }
+        }
+        Err(err) => return Err(MetadataError::Database(err)),
+    };
 
     // Respond
     match query.digest {
@@ -94,7 +114,9 @@ pub async fn get_metadata(
 pub async fn put_metadata(
     addr: Address,
     metadata_raw: Bytes,
+    token: String,
     db_data: Database,
+    token_cache: TokenCache,
 ) -> Result<Response<Body>, MetadataError> {
     // Decode metadata
     let metadata =
@@ -115,9 +137,13 @@ pub async fn put_metadata(
         .map_err(MetadataError::InvalidSignature)?;
 
     // Put to database
-    task::spawn_blocking(move || db_data.put_metadata(addr.as_body(), &metadata_raw))
+    let addr_raw = addr.as_body().to_vec();
+    task::spawn_blocking(move || db_data.put_metadata(&addr_raw, &metadata_raw))
         .await
         .unwrap()?;
+
+    // Put token to cache
+    token_cache.add_token(addr, token).await;
 
     // Respond
     Ok(Response::builder().body(Body::empty()).unwrap())
