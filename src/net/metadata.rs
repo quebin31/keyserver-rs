@@ -2,7 +2,7 @@ use std::fmt;
 
 use bitcoincash_addr::Address;
 use bytes::Bytes;
-use http::header::HeaderMap;
+use http::header::{HeaderMap, HeaderValue, MAX_FORWARDS};
 use hyper::client::connect::Connect;
 use prost::Message as _;
 use rocksdb::Error as RocksError;
@@ -83,6 +83,11 @@ where
     let raw_metadata = match database.get_raw_metadata(addr.as_body()) {
         Ok(Some(some)) => some,
         Ok(None) => {
+            // If MAX_FORWARDS is 0 then don't sample peers
+            if headers.get(MAX_FORWARDS) == Some(&HeaderValue::from(0)) {
+                return Err(MetadataError::NotFound);
+            }
+
             let addr_str = addr.encode().unwrap();
             let sampled = peer_handler.sample_peer_metadata(&addr_str).await;
             if let Ok(metadata) = sampled {

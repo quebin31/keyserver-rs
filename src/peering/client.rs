@@ -1,7 +1,10 @@
 use std::{collections::HashSet, str::FromStr};
 
 use bytes::Bytes;
-use http::{header::AUTHORIZATION, header::MAX_FORWARDS, uri::InvalidUri};
+use http::{
+    header::{AUTHORIZATION, MAX_FORWARDS},
+    uri::InvalidUri,
+};
 use hyper::{
     body::aggregate, client::connect::Connect, Body, Client, Error as HyperError, Request, Uri,
 };
