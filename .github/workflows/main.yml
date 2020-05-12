@@ -3,9 +3,16 @@ name: CI
 on: [push, pull_request]
 
 jobs:
+  zmq:
+    name: Setup
+    runs-on: ubuntu-latest
+    steps: 
+      - name: Install ZMQ
+        run: sudo apt-get install libzmq3-dev
   check:
     name: cargo check
     runs-on: ubuntu-latest
+    needs: zmq
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -20,6 +27,7 @@ jobs:
   test:
     name: cargo test
     runs-on: ubuntu-latest
+    needs: zmq
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -50,6 +58,7 @@ jobs:
   clippy:
     name: cargo clippy
     runs-on: ubuntu-latest
+    needs: zmq
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
