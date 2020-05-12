@@ -22,6 +22,7 @@ use cashweb::{
 use futures::prelude::*;
 use hyper::client::HttpConnector;
 use lazy_static::lazy_static;
+use log::info;
 #[cfg(feature = "monitoring")]
 use prometheus::{Encoder, TextEncoder};
 use warp::{
@@ -102,10 +103,15 @@ async fn main() {
     let peer_handler_inner = peer_handler.clone();
     let db_inner = db.clone();
     let broadcast_heartbeat = || async move {
-        while let Some(Ok(_)) = subscriber.next().await {
-            token_cache_inner
-                .broadcast_block(&peer_handler_inner, &db_inner)
-                .await;
+        while let Some(val) = subscriber.next().await {
+            if let Ok(inner) = val {
+                if let Some(block) = inner.get(1) {
+                    info!("found block {}", hex::encode(block.as_ref()));
+                    token_cache_inner
+                        .broadcast_block(&peer_handler_inner, &db_inner)
+                        .await;
+                }
+            }
         }
     };
     tokio::spawn(broadcast_heartbeat());
