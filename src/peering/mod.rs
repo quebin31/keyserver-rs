@@ -30,6 +30,7 @@ where
     C: Clone + Send + Sync,
     C: Connect + 'static,
 {
+    /// Construct new `PeerHandler`.
     pub fn new(peers: HashSet<String>, connector: C) -> Self {
         Self {
             peers: Arc::new(RwLock::new(peers)),
@@ -71,12 +72,12 @@ where
         current_urls
     }
 
-    pub async fn sample_peer_metadata(&self, addr: &str) -> Result<Vec<u8>, PeerError> {
+    pub async fn sample_metadata(&self, addr: &str) -> Result<(Vec<u8>, String), PeerError> {
         let sample = self.sample().await;
         let mut metadata_fan = self.client.get_metadata_fan(addr, &sample).await;
-        let raw_metadata = metadata_fan.pop().ok_or(PeerError::NotFound)?;
-        // let metadata = AddressMetadata::decode(raw_metadata).map_err(PeerError::Decode)?;
-        Ok(raw_metadata.bytes().to_vec())
+        let (raw_auth_wrapper, token) = metadata_fan.pop().ok_or(PeerError::NotFound)?;
+        // TODO: Find latest
+        Ok((raw_auth_wrapper.bytes().to_vec(), token))
     }
 
     pub async fn sample(&self) -> Vec<String> {

@@ -13,8 +13,7 @@ use bitcoincash_addr::{
 };
 use cashweb::bitcoin_client::{BitcoinClient, HttpConnector, NodeError};
 use cashweb::{
-    payments::PreprocessingError,
-    protobuf::bip70::{PaymentAck, PaymentDetails, PaymentRequest},
+    payments::{bip70::*, PreprocessingError},
     token::schemes::chain_commitment::*,
 };
 use prost::Message as _;
@@ -29,10 +28,7 @@ use warp::{
 };
 
 use super::{address_decode, IntoResponse};
-use crate::{
-    models::bip70::{Output, Payment},
-    METADATA_PATH, PAYMENTS_PATH, SETTINGS,
-};
+use crate::{METADATA_PATH, PAYMENTS_PATH, SETTINGS};
 
 pub const COMMITMENT_PREIMAGE_SIZE: usize = 20 + 32;
 pub const COMMITMENT_SIZE: usize = 32;

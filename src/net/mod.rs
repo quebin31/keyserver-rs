@@ -67,7 +67,11 @@ pub async fn handle_rejection(err: Rejection) -> Result<Response<Body>, Infallib
         log::error!("{:#?}", err);
         return Ok(err.into_response());
     }
-    if let Some(err) = err.find::<MetadataError>() {
+    if let Some(err) = err.find::<GetMetadataError>() {
+        log::error!("{:#?}", err);
+        return Ok(err.into_response());
+    }
+    if let Some(err) = err.find::<PutMetadataError>() {
         log::error!("{:#?}", err);
         return Ok(err.into_response());
     }

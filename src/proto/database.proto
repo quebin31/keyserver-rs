@@ -1,0 +1,8 @@
+syntax = "proto3";
+package database;
+
+// Convenience wrapper around the authorization wrapper
+message DatabaseWrapper {
+    bytes serialized_auth_wrapper = 1;
+    bytes token = 2;
+}

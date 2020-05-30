@@ -3,7 +3,7 @@ use std::sync::Arc;
 use prost::Message as PMessage;
 use rocksdb::{Error as RocksError, Options, DB};
 
-use crate::models::{keyserver::Peers, wrapper::AuthWrapper};
+use crate::models::{keyserver::Peers, database::DatabaseWrapper};
 
 const METADATA_NAMESPACE: u8 = b'm';
 const PEER_NAMESPACE: u8 = b'p';
@@ -24,21 +24,24 @@ impl Database {
         self.0.get(key)
     }
 
-    pub fn get_metadata(&self, addr: &[u8]) -> Result<Option<AuthWrapper>, RocksError> {
-        self.get_raw_metadata(addr).map(|raw_metadata_opt| {
-            raw_metadata_opt.map(|raw_metadata| {
-                AuthWrapper::decode(&raw_metadata[..]).unwrap() // This panics if stored bytes are malformed
+    /// Get a `DatabaseWrapper` from the database.
+    pub fn get_metadata(&self, addr: &[u8]) -> Result<Option<DatabaseWrapper>, RocksError> {
+        self.get_raw_metadata(addr).map(|raw_opt| {
+            raw_opt.map(|raw| {
+                DatabaseWrapper::decode(&raw[..]).unwrap() // This panics if stored bytes are malformed
             })
         })
     }
 
-    pub fn put_metadata(&self, addr: &[u8], raw_metadata: &[u8]) -> Result<(), RocksError> {
+    /// Put a serialized `DatabaseWrapper` to the database.
+    pub fn put_metadata(&self, addr: &[u8], raw: &[u8]) -> Result<(), RocksError> {
         // Prefix key
         let key = [&[METADATA_NAMESPACE], addr].concat();
 
-        self.0.put(key, raw_metadata)
+        self.0.put(key, raw)
     }
 
+    /// Get `Peers` from database.
     pub fn get_peers(&self) -> Result<Option<Peers>, RocksError> {
         self.get_peers_raw().map(|raw_peers_opt| {
             raw_peers_opt.map(|raw_metadata| {
@@ -47,11 +50,13 @@ impl Database {
         })
     }
 
+    /// Get serialized `Peers` from database.
     pub fn get_peers_raw(&self) -> Result<Option<Vec<u8>>, RocksError> {
         self.0.get([PEER_NAMESPACE])
     }
 
-    pub fn put_peers(&self, raw_metadata: &[u8]) -> Result<(), RocksError> {
-        self.0.put([PEER_NAMESPACE], raw_metadata)
+    /// Put serialized `Peers` to database.
+    pub fn put_peers(&self, raw: &[u8]) -> Result<(), RocksError> {
+        self.0.put([PEER_NAMESPACE], raw)
     }
 }
