@@ -8,6 +8,8 @@ pub mod keyserver {
 
 // TODO: Move to cahsweb-rs
 pub mod wrapper {
+    use std::fmt;
+
     use secp256k1::{key::PublicKey, Error as SecpError, Message, Secp256k1, Signature};
     use sha2::{Digest, Sha256};
 
@@ -15,13 +17,24 @@ pub mod wrapper {
 
     #[derive(Debug)]
     pub enum ValidationError {
-        NotFound,
         InvalidSignature(SecpError),
         Message(SecpError),
-        MetadataDecode(prost::DecodeError),
         PublicKey(SecpError),
         Signature(SecpError),
         UnsupportedScheme,
+    }
+
+    impl fmt::Display for ValidationError {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            let printable = match self {
+                Self::InvalidSignature(err) => return err.fmt(f),
+                Self::Message(err) => return err.fmt(f),
+                Self::PublicKey(err) => return err.fmt(f),
+                Self::Signature(err) => return err.fmt(f),
+                Self::UnsupportedScheme => "unsupported signature scheme",
+            };
+            f.write_str(printable)
+        }
     }
 
     impl AuthWrapper {

@@ -5,8 +5,6 @@ use bytes::Bytes;
 use http::header::{HeaderMap, HeaderValue, AUTHORIZATION, MAX_FORWARDS};
 use hyper::client::connect::Connect;
 use prost::Message as _;
-use secp256k1::{key::PublicKey, Message, Secp256k1, Signature};
-use sha2::{Digest, Sha256};
 use tokio::task;
 use warp::{http::Response, hyper::Body};
 
@@ -23,7 +21,7 @@ pub struct Query {
 /// Handles metadata GET requests.
 pub async fn get_metadata<C>(
     addr: Address,
-    query: Query, // TODO: Use digest
+    _query: Query, // TODO: Use digest
     headers: HeaderMap,
     database: Database,
     peer_handler: PeerHandler<C>,
@@ -81,18 +79,9 @@ pub async fn put_metadata(
         AuthWrapper::decode(metadata_raw.clone()).map_err(PutMetadataError::MetadataDecode)?;
 
     // Verify signatures
-    let pubkey = PublicKey::from_slice(&metadata.pub_key).map_err(PutMetadataError::PublicKey)?;
-    if metadata.scheme != 1 {
-        // TODO: Support Schnorr
-        return Err(PutMetadataError::UnsupportedScheme);
-    }
-    let signature =
-        Signature::from_compact(&metadata.signature).map_err(PutMetadataError::Signature)?;
-    let secp = Secp256k1::verification_only();
-    let payload_digest = Sha256::digest(&metadata.serialized_payload);
-    let msg = Message::from_slice(&payload_digest).map_err(PutMetadataError::Message)?;
-    secp.verify(&msg, &signature, &pubkey)
-        .map_err(PutMetadataError::InvalidSignature)?;
+    metadata
+        .validate()
+        .map_err(PutMetadataError::InvalidAuthWrapper)?;
 
     // Put to database
     let addr_raw = addr.as_body().to_vec();

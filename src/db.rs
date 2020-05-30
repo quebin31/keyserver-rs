@@ -3,7 +3,7 @@ use std::sync::Arc;
 use prost::Message as PMessage;
 use rocksdb::{Error as RocksError, Options, DB};
 
-use crate::models::{keyserver::Peers, database::DatabaseWrapper};
+use crate::models::{database::DatabaseWrapper, keyserver::Peers};
 
 const METADATA_NAMESPACE: u8 = b'm';
 const PEER_NAMESPACE: u8 = b'p';

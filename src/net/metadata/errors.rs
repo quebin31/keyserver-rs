@@ -1,20 +1,15 @@
 use std::fmt;
 
 use rocksdb::Error as RocksError;
-use secp256k1::Error as SecpError;
 use warp::reject::Reject;
 
-use crate::net::IntoResponse;
+use crate::{models::wrapper::ValidationError, net::IntoResponse};
 
 #[derive(Debug)]
 pub enum PutMetadataError {
     Database(RocksError),
-    InvalidSignature(SecpError),
-    Message(SecpError),
     MetadataDecode(prost::DecodeError),
-    PublicKey(SecpError),
-    Signature(SecpError),
-    UnsupportedScheme,
+    InvalidAuthWrapper(ValidationError),
 }
 
 impl From<RocksError> for PutMetadataError {
@@ -25,16 +20,11 @@ impl From<RocksError> for PutMetadataError {
 
 impl fmt::Display for PutMetadataError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let printable = match self {
-            Self::Database(err) => return err.fmt(f),
-            Self::InvalidSignature(err) => return err.fmt(f),
-            Self::Message(err) => return err.fmt(f),
-            Self::MetadataDecode(err) => return err.fmt(f),
-            Self::PublicKey(err) => return err.fmt(f),
-            Self::Signature(err) => return err.fmt(f),
-            Self::UnsupportedScheme => "unsupported signature scheme",
-        };
-        f.write_str(printable)
+        match self {
+            Self::Database(err) => err.fmt(f),
+            Self::MetadataDecode(err) => err.fmt(f),
+            Self::InvalidAuthWrapper(err) => err.fmt(f),
+        }
     }
 }
 
@@ -44,7 +34,6 @@ impl IntoResponse for PutMetadataError {
     fn to_status(&self) -> u16 {
         match self {
             Self::Database(_) => 500,
-            Self::UnsupportedScheme => 501,
             _ => 400,
         }
     }
