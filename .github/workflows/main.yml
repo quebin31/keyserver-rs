@@ -70,3 +70,25 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
+
+  regtest:
+    name: regression tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install ZMQ
+        run: sudo apt-get install libzmq3-dev
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+      - name: Install Bitcoin Cash
+        run: sudo add-apt-repository ppa:bitcoin-abc/ppa
+        run: sudo apt-get update
+        run: sudo apt-get install bitcoind
+      - name: Run bitcoind
+        run: bitcoind -daemon -regtest -zmqpubhashblock=tcp://127.0.0.1:28332 -rpcbind=127.0.0.1 -rpcport=18443 -rpcallowip=0.0.0.0/0 -wallet -rpcuser=user -rpcpassword=password
