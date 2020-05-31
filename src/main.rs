@@ -191,7 +191,7 @@ async fn main() {
     // Commitment handler
     let commit = warp::path(COMMIT_PATH)
         .and(warp::post())
-        .and(warp::query())
+        .and(warp::body::json())
         .and_then(move |body| net::commit(body).map_err(warp::reject::custom));
 
     // Payment handler
