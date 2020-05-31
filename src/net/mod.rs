@@ -31,6 +31,7 @@ impl fmt::Display for AddressDecode {
     }
 }
 
+/// Helper method for decoding an address string.
 pub fn address_decode(addr_str: &str) -> Result<Address, AddressDecode> {
     // Convert address
     Address::decode(&addr_str).map_err(|(cash_err, base58_err)| AddressDecode(cash_err, base58_err))
@@ -42,9 +43,12 @@ impl IntoResponse for AddressDecode {
     }
 }
 
+/// Helper trait for converting errors into a response.
 pub trait IntoResponse: fmt::Display + Sized {
+    /// Convert error into a status code.
     fn to_status(&self) -> u16;
 
+    /// Convert error into a `Response`.
     fn into_response(&self) -> Response<Body> {
         let status = self.to_status();
 
@@ -62,6 +66,7 @@ pub trait IntoResponse: fmt::Display + Sized {
     }
 }
 
+/// Global rejection handler, takes an rejection and converts it into a `Response`.
 pub async fn handle_rejection(err: Rejection) -> Result<Response<Body>, Infallible> {
     if let Some(err) = err.find::<AddressDecode>() {
         log::error!("{:#?}", err);

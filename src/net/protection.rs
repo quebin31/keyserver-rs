@@ -43,17 +43,17 @@ pub async fn pop_protection(
     metadata: Bytes,
     header_map: HeaderMap,
     token_scheme: Arc<ChainCommitmentScheme<HttpConnector>>,
-) -> Result<(Address, Bytes, String), ProtectionError> {
+) -> Result<(Address, Bytes, String, Vec<u8>), ProtectionError> {
     let pub_key_hash = addr.as_body();
     let metadata_hash = Sha256::digest(&metadata);
 
     match extract_pop(&header_map) {
         Some(pop_token) => {
-            token_scheme
+            let raw_token = token_scheme
                 .validate_token(pub_key_hash, &metadata_hash, pop_token)
                 .await
                 .map_err(ProtectionError::Validation)?;
-            Ok((addr, metadata, pop_token.to_string()))
+            Ok((addr, metadata, pop_token.to_string(), raw_token))
         }
         None => Err(ProtectionError::MissingToken(
             pub_key_hash.to_vec(),

@@ -163,12 +163,11 @@ async fn main() {
     let metadata_get = warp::path(METADATA_PATH)
         .and(addr_base)
         .and(warp::get())
-        .and(warp::query())
         .and(warp::header::headers_cloned())
         .and(db_state.clone())
         .and(peer_handler.clone())
-        .and_then(move |addr, query, headers, db, peer_handler| {
-            net::get_metadata(addr, query, headers, db, peer_handler).map_err(warp::reject::custom)
+        .and_then(move |addr, headers, db, peer_handler| {
+            net::get_metadata(addr, headers, db, peer_handler).map_err(warp::reject::custom)
         });
     let metadata_put = warp::path(METADATA_PATH)
         .and(addr_protected)
@@ -178,8 +177,9 @@ async fn main() {
         ))
         .and(db_state.clone())
         .and(token_cache_state)
-        .and_then(move |addr, body, token, db, token_cache| {
-            net::put_metadata(addr, body, token, db, token_cache).map_err(warp::reject::custom)
+        .and_then(move |addr, body, token_str, raw_token, db, token_cache| {
+            net::put_metadata(addr, body, token_str, raw_token, db, token_cache)
+                .map_err(warp::reject::custom)
         });
 
     // Peer handler

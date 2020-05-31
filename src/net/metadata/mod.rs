@@ -9,19 +9,16 @@ use tokio::task;
 use warp::{http::Response, hyper::Body};
 
 use crate::{
-    db::Database, models::wrapper::AuthWrapper, peering::PeerHandler, peering::TokenCache,
+    db::Database,
+    models::{database::DatabaseWrapper, wrapper::AuthWrapper},
+    peering::PeerHandler,
+    peering::TokenCache,
 };
 pub use errors::*;
-
-#[derive(Debug, Deserialize)]
-pub struct Query {
-    digest: Option<bool>,
-}
 
 /// Handles metadata GET requests.
 pub async fn get_metadata<C>(
     addr: Address,
-    _query: Query, // TODO: Use digest
     headers: HeaderMap,
     database: Database,
     peer_handler: PeerHandler<C>,
@@ -70,13 +67,22 @@ where
 pub async fn put_metadata(
     addr: Address,
     metadata_raw: Bytes,
-    token: String,
+    token_str: String,
+    token_raw: Vec<u8>,
     db_data: Database,
     token_cache: TokenCache,
 ) -> Result<Response<Body>, PutMetadataError> {
     // Decode metadata
     let metadata =
         AuthWrapper::decode(metadata_raw.clone()).map_err(PutMetadataError::MetadataDecode)?;
+
+    // Wrap with database
+    let database_wrapper = DatabaseWrapper {
+        serialized_auth_wrapper: metadata_raw.to_vec(),
+        token: token_raw,
+    };
+    let mut raw_database_wrapper = Vec::with_capacity(database_wrapper.encoded_len());
+    database_wrapper.encode(&mut raw_database_wrapper).unwrap(); // This is safe
 
     // Verify signatures
     metadata
@@ -85,12 +91,12 @@ pub async fn put_metadata(
 
     // Put to database
     let addr_raw = addr.as_body().to_vec();
-    task::spawn_blocking(move || db_data.put_metadata(&addr_raw, &metadata_raw))
+    task::spawn_blocking(move || db_data.put_metadata(&addr_raw, &raw_database_wrapper))
         .await
         .unwrap()?;
 
     // Put token to cache
-    token_cache.add_token(addr, token).await;
+    token_cache.add_token(addr, token_str).await;
 
     // Respond
     Ok(Response::builder().body(Body::empty()).unwrap())
