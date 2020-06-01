@@ -17,6 +17,9 @@ use warp::{
     reject::{PayloadTooLarge, Reject, Rejection},
 };
 
+pub const SAMPLING: &str = "Sample";
+pub const HEADER_VALUE_FALSE: &str = "false";
+
 #[derive(Debug)]
 pub struct AddressDecode(
     bitcoincash_addr::cashaddr::DecodingError,

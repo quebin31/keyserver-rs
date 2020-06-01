@@ -2,7 +2,7 @@ use std::{collections::HashSet, str::FromStr};
 
 use bytes::Bytes;
 use http::{
-    header::{ToStrError, AUTHORIZATION, MAX_FORWARDS},
+    header::{ToStrError, AUTHORIZATION},
     uri::InvalidUri,
 };
 use hyper::{
@@ -17,6 +17,7 @@ use crate::{
         keyserver::Peers,
         wrapper::{AuthWrapper, ValidationError},
     },
+    net::{HEADER_VALUE_FALSE, SAMPLING},
     METADATA_PATH,
 };
 
@@ -82,7 +83,7 @@ where
         let url = format!("{}/{}/{}", url, METADATA_PATH, addr);
         let uri = Uri::from_str(&url)?;
         let request = Request::get(uri)
-            .header(MAX_FORWARDS, 0)
+            .header(SAMPLING, HEADER_VALUE_FALSE)
             .body(Body::empty())
             .unwrap(); // This is safe
         let response = self.0.request(request).await?;

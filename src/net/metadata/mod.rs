@@ -2,7 +2,7 @@ pub mod errors;
 
 use bitcoincash_addr::Address;
 use bytes::Bytes;
-use http::header::{HeaderMap, HeaderValue, AUTHORIZATION, MAX_FORWARDS};
+use http::header::{HeaderMap, HeaderValue, AUTHORIZATION};
 use hyper::client::connect::Connect;
 use prost::Message as _;
 use tokio::task;
@@ -14,6 +14,7 @@ use crate::{
     peering::PeerHandler,
     peering::TokenCache,
 };
+use super::{HEADER_VALUE_FALSE, SAMPLING};
 pub use errors::*;
 
 /// Handles metadata GET requests.
@@ -48,7 +49,7 @@ where
     }
 
     // If MAX_FORWARDS is 0 then don't sample peers
-    if headers.get(MAX_FORWARDS) == Some(&HeaderValue::from(0)) {
+    if headers.get(SAMPLING) == Some(&HeaderValue::from_static(HEADER_VALUE_FALSE)) {
         return Err(GetMetadataError::NotFound);
     }
 
