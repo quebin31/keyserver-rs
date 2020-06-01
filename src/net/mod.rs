@@ -17,7 +17,7 @@ use warp::{
     reject::{PayloadTooLarge, Reject, Rejection},
 };
 
-pub const SAMPLING: &str = "Sample";
+pub const SAMPLING: &str = "Sample-Peers";
 pub const HEADER_VALUE_FALSE: &str = "false";
 
 #[derive(Debug)]
