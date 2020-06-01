@@ -64,10 +64,13 @@ impl Database {
 
 #[cfg(test)]
 pub mod tests {
-    use rocksdb::{DB, Options};
+    use rocksdb::{Options, DB};
 
-    use crate::models::{database::DatabaseWrapper, keyserver::{Peers, Peer}};
     use super::*;
+    use crate::models::{
+        database::DatabaseWrapper,
+        keyserver::{Peer, Peers},
+    };
 
     #[test]
     fn peers() {
@@ -75,16 +78,16 @@ pub mod tests {
 
         // Create database
         let database = Database::try_new(TEST_NAME).unwrap();
-        
+
         // Create peers
         let peer_a = Peer {
-            url: "url a".to_string()
+            url: "url a".to_string(),
         };
         let peer_b = Peer {
-            url: "url b".to_string()
+            url: "url b".to_string(),
         };
         let peers_in = Peers {
-            peers: vec![peer_a, peer_b]
+            peers: vec![peer_a, peer_b],
         };
         let mut peers_raw = Vec::with_capacity(peers_in.encoded_len());
         peers_in.encode(&mut peers_raw).unwrap();
@@ -110,14 +113,16 @@ pub mod tests {
 
         // Create database wrapper
         let database_wrapper_in = DatabaseWrapper {
-            token: vec![0,1,3,4],
-            serialized_auth_wrapper: vec![2,3, 4]
+            token: vec![0, 1, 3, 4],
+            serialized_auth_wrapper: vec![2, 3, 4],
         };
         let mut database_wrapper_raw = Vec::with_capacity(database_wrapper_in.encoded_len());
-        database_wrapper_in.encode(&mut database_wrapper_raw).unwrap();
+        database_wrapper_in
+            .encode(&mut database_wrapper_raw)
+            .unwrap();
 
         // Put to database
-        let addr = vec![0,3,4,3,2];
+        let addr = vec![0, 3, 4, 3, 2];
         database.put_metadata(&addr, &database_wrapper_raw).unwrap();
 
         // Get from database
