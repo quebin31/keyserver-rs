@@ -8,13 +8,13 @@ use prost::Message as _;
 use tokio::task;
 use warp::{http::Response, hyper::Body};
 
+use super::{HEADER_VALUE_FALSE, SAMPLING};
 use crate::{
     db::Database,
     models::{database::DatabaseWrapper, wrapper::AuthWrapper},
     peering::PeerHandler,
     peering::TokenCache,
 };
-use super::{HEADER_VALUE_FALSE, SAMPLING};
 pub use errors::*;
 
 /// Handles metadata GET requests.

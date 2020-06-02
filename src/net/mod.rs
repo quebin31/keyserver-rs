@@ -12,6 +12,7 @@ use std::{convert::Infallible, fmt};
 
 use bitcoincash_addr::Address;
 use warp::{
+    filters::body::BodyDeserializeError,
     http::Response,
     hyper::Body,
     reject::{PayloadTooLarge, Reject, Rejection},
@@ -71,6 +72,14 @@ pub trait IntoResponse: fmt::Display + Sized {
 
 /// Global rejection handler, takes an rejection and converts it into a `Response`.
 pub async fn handle_rejection(err: Rejection) -> Result<Response<Body>, Infallible> {
+    if let Some(err) = err.find::<BodyDeserializeError>() {
+        log::error!("{:#?}", err);
+        return Ok(Response::builder()
+            .status(400)
+            .body(Body::from("unexpected body serialization"))
+            .unwrap());
+    }
+
     if let Some(err) = err.find::<AddressDecode>() {
         log::error!("{:#?}", err);
         return Ok(err.into_response());
@@ -113,5 +122,6 @@ pub async fn handle_rejection(err: Rejection) -> Result<Response<Body>, Infallib
         return Ok(Response::builder().status(404).body(Body::empty()).unwrap());
     }
 
+    log::error!("unexpected error found {:?}", err);
     Ok(Response::builder().status(500).body(Body::empty()).unwrap())
 }
