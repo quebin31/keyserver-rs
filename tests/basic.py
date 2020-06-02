@@ -18,6 +18,15 @@ class TestPop(TestCase):
     def test_put_without_pop(self):
         """PUT without a POP token"""
 
+        # Construct auth wrapper
+        address, keypair = generate_random_keypair()
+        metadata = construct_dummy_metadata()
+        auth_wrapper, digest = construct_auth_wrapper(metadata, keypair)
+
+        raw_auth_wrapper = auth_wrapper.SerializeToString()
+        response = self.keyserver_client.put_metadata_no_token(address, raw_auth_wrapper)
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.text, "missing token")
 
 
     def test_put_get_using_pop(self):

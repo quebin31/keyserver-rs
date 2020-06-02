@@ -133,8 +133,12 @@ class KeyserverClient:
         response = get(url=self.url + "/keys/" + address)
         return response
 
-    def put_metadata(self, address, raw_metadata: bytes, token: str):
-        response = put(url=self.url + address, data=raw_metadata, headers={
+    def put_metadata(self, address: str, raw_metadata: bytes, token: str):
+        response = put(url=self.url + "/keys/" + address, data=raw_metadata, headers={
             "Authorization": token
         })
+        return response
+
+    def put_metadata_no_token(self, address: str, raw_metadata: bytes):
+        response = put(url=self.url + "/keys/" + address, data=raw_metadata)
         return response
