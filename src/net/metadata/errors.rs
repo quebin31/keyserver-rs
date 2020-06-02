@@ -66,8 +66,8 @@ impl fmt::Display for GetMetadataError {
 impl IntoResponse for GetMetadataError {
     fn to_status(&self) -> u16 {
         match self {
+            Self::NotFound => 404,
             Self::Database(_) => 500,
-            _ => 400,
         }
     }
 }
