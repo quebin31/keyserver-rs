@@ -121,10 +121,10 @@ class KeyserverClient:
     def __init__(self, url: str):
         self.url = url
 
-    def commit(self, address: str, metadata_digest: bytes) -> Response:
+    def commit(self, pubkey_digest: str, metadata_digest: bytes) -> Response:
         digest_hex = metadata_digest.hex()
         response = post(url=self.url + "/commit", params={
-            'address': address,
+            'pubkey_digest': pubkey_digest,
             'metadata_digest': digest_hex
         })
         return response

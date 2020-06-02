@@ -13,7 +13,7 @@ class TestPop(TestCase):
 
         address, _ = generate_random_keypair()
         response = self.keyserver_client.get_metadata(address)
-        self.assertEqual(response.status_code, 402)
+        self.assertEqual(response.status_code, 404)
 
     def test_put_get_using_pop(self):
         """Put without POP then get"""
