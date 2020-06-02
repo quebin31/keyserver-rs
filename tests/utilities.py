@@ -123,7 +123,7 @@ class KeyserverClient:
 
     def commit(self, pubkey_digest: str, metadata_digest: bytes) -> Response:
         digest_hex = metadata_digest.hex()
-        response = post(url=self.url + "/commit", params={
+        response = post(url=self.url + "/commit", json={
             'pubkey_digest': pubkey_digest,
             'metadata_digest': digest_hex
         })
