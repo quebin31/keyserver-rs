@@ -14,4 +14,6 @@ message AuthWrapper {
     SignatureScheme scheme = 3;
     // The serialized payload covered by the signature.
     bytes serialized_payload = 4;
+    // The SHA256 digest of the serialized_payload.
+    bytes payload_digest = 5;
 }

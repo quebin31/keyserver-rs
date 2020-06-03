@@ -26,7 +26,7 @@ use warp::{
 use super::IntoResponse;
 use crate::{METADATA_PATH, PAYMENTS_PATH, SETTINGS};
 
-pub const COMMITMENT_PREIMAGE_SIZE: usize = 20 + 32;
+pub const COMMITMENT_PREIMAGE_SIZE: usize = 32 + 32;
 pub const COMMITMENT_SIZE: usize = 32;
 pub const OP_RETURN: u8 = 106;
 
@@ -102,7 +102,7 @@ pub async fn process_payment(
     }
 
     // Get address
-    let pub_key_hash = &commitment_preimage[..20];
+    let pub_key_hash = &commitment_preimage[..32];
     let address = Address {
         body: pub_key_hash.to_vec(),
         ..Default::default()
@@ -110,7 +110,7 @@ pub async fn process_payment(
     let addr_str = address.encode().map_err(PaymentError::Address)?;
 
     // Extract metadata
-    let address_metadata_hash = &commitment_preimage[20..COMMITMENT_PREIMAGE_SIZE];
+    let address_metadata_hash = &commitment_preimage[32..COMMITMENT_PREIMAGE_SIZE];
 
     let expected_commitment = construct_commitment(pub_key_hash, address_metadata_hash);
 
@@ -222,6 +222,7 @@ pub async fn commit(json: CommitQuery) -> Result<Response<Body>, PaymentRequestE
         hex::decode(json.metadata_digest).map_err(PaymentRequestError::MetadataDigestHex)?;
 
     // Generate output
+
     let commitment_preimage = [pubkey_digest_raw, metadata_digest_raw].concat();
     let commitment = Sha256::digest(&commitment_preimage);
     let op_return_pre: [u8; 2] = [106, COMMITMENT_SIZE as u8];

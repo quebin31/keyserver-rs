@@ -67,28 +67,25 @@ where
 /// Handles metadata PUT requests.
 pub async fn put_metadata(
     addr: Address,
-    metadata_raw: Bytes,
+    auth_wrapper_raw: Bytes,
+    auth_wrapper: AuthWrapper,
     token_str: String,
     token_raw: Vec<u8>,
     db_data: Database,
     token_cache: TokenCache,
 ) -> Result<Response<Body>, PutMetadataError> {
-    // Decode metadata
-    let metadata =
-        AuthWrapper::decode(metadata_raw.clone()).map_err(PutMetadataError::MetadataDecode)?;
+    // Verify signatures
+    auth_wrapper
+        .validate()
+        .map_err(PutMetadataError::InvalidAuthWrapper)?;
 
     // Wrap with database
     let database_wrapper = DatabaseWrapper {
-        serialized_auth_wrapper: metadata_raw.to_vec(),
+        serialized_auth_wrapper: auth_wrapper_raw.to_vec(),
         token: token_raw,
     };
     let mut raw_database_wrapper = Vec::with_capacity(database_wrapper.encoded_len());
     database_wrapper.encode(&mut raw_database_wrapper).unwrap(); // This is safe
-
-    // Verify signatures
-    metadata
-        .validate()
-        .map_err(PutMetadataError::InvalidAuthWrapper)?;
 
     // Put to database
     let addr_raw = addr.as_body().to_vec();
