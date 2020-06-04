@@ -4,16 +4,16 @@ from paymentrequest_pb2 import *
 from keyserver_client import KeyserverClient
 from copy import copy
 
-class TestPop(TestCase):
-    def setUp(self):
-        self.bitcoin_client = BitcoinClient("127.0.0.1", 18443)
-        self.keyserver_client = KeyserverClient("http://0.0.0.0:8080")
+bitcoin_client = BitcoinClient("127.0.0.1", 18443)
+keyserver_client = KeyserverClient("http://0.0.0.0:8080")
 
+
+class TestPop(TestCase):
     def test_get_missing(self):
         """Get random missing metadata."""
 
         address, _ = generate_random_keypair()
-        response = self.keyserver_client.get_metadata(address)
+        response = keyserver_client.get_metadata(address)
         self.assertEqual(response.status_code, 404)
 
     def test_put_without_pop(self):
@@ -22,13 +22,13 @@ class TestPop(TestCase):
         # Construct auth wrapper
         address, keypair = generate_random_keypair()
         metadata = construct_dummy_metadata()
-        auth_wrapper, digest = construct_auth_wrapper(metadata, keypair)
+        auth_wrapper, _ = construct_auth_wrapper(metadata, keypair)
 
         raw_auth_wrapper = auth_wrapper.SerializeToString()
-        response = self.keyserver_client.put_metadata_no_token(address, raw_auth_wrapper)
+        response = keyserver_client.put_metadata_no_token(
+            address, raw_auth_wrapper)
         self.assertEqual(response.status_code, 402)
         payment_request = PaymentRequest.FromString(response.content)
-
 
     def test_put_get_using_pop(self):
         """Obtain a POP token, PUT with it then GET"""
@@ -44,7 +44,8 @@ class TestPop(TestCase):
         raw_auth_wrapper_truncated = auth_wrapper_truncated.SerializeToString()
 
         # Construct pubkey_digest
-        response = self.keyserver_client.put_metadata_no_token(address, raw_auth_wrapper_truncated)
+        response = keyserver_client.put_metadata_no_token(
+            address, raw_auth_wrapper_truncated)
         self.assertEqual(response.status_code, 402)
 
         # Parse PaymentRequest and PaymentDetails
@@ -53,16 +54,18 @@ class TestPop(TestCase):
         payment_details = PaymentDetails.FromString(payment_details_raw)
 
         # Generate Payment
-        payment = self.bitcoin_client.generate_payment_from_payment_request(payment_details)
+        payment = bitcoin_client.generate_payment_from_payment_request(
+            payment_details)
         payment_raw = payment.SerializeToString()
 
         # Send payment
-        response = self.keyserver_client.send_payment(payment_raw)
+        response = keyserver_client.send_payment(payment_raw)
         self.assertEqual(response.status_code, 200)
         payment_ack = PaymentACK.FromString(response.content)
 
         token = response.headers["Authorization"]
 
         raw_auth_wrapper = auth_wrapper.SerializeToString()
-        response = self.keyserver_client.put_metadata(address, raw_auth_wrapper, token)
+        response = keyserver_client.put_metadata(
+            address, raw_auth_wrapper, token)
         self.assertEqual(response.status_code, 200)
