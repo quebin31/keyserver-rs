@@ -130,5 +130,14 @@ def construct_auth_wrapper(metadata: AddressMetadata, keypair: CECKey):
     signature, digest = sign_metadata(raw_metadata, keypair)
     public_key = keypair.get_pubkey()
     auth_wrapper = AuthWrapper(
-        pub_key=public_key, serialized_payload=raw_metadata, scheme=1, signature=signature)
+        pub_key=public_key, serialized_payload=raw_metadata, scheme=1, signature=signature, payload_digest=digest)
+    return auth_wrapper, digest
+
+def construct_auth_wrapper_truncated(metadata: AddressMetadata, keypair: CECKey):
+    """Return the complete AuthWrapper object and the digest of the metadata."""
+    raw_metadata = metadata.SerializeToString()
+    signature, digest = sign_metadata(raw_metadata, keypair)
+    public_key = keypair.get_pubkey()
+    auth_wrapper = AuthWrapper(
+        pub_key=public_key, payload_digest=digest, scheme=1, signature=signature)
     return auth_wrapper, digest

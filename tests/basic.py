@@ -2,6 +2,7 @@ from unittest import TestCase
 from utilities import *
 from paymentrequest_pb2 import *
 from keyserver_client import KeyserverClient
+from copy import copy
 
 class TestPop(TestCase):
     def setUp(self):
@@ -25,8 +26,8 @@ class TestPop(TestCase):
 
         raw_auth_wrapper = auth_wrapper.SerializeToString()
         response = self.keyserver_client.put_metadata_no_token(address, raw_auth_wrapper)
-        self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.text, "missing token")
+        self.assertEqual(response.status_code, 402)
+        payment_request = PaymentRequest.FromString(response.content)
 
 
     def test_put_get_using_pop(self):
@@ -35,12 +36,15 @@ class TestPop(TestCase):
         # Construct auth wrapper
         address, keypair = generate_random_keypair()
         metadata = construct_dummy_metadata()
-        auth_wrapper, auth_wrapper_digest = construct_auth_wrapper(metadata, keypair)
+        auth_wrapper, _ = construct_auth_wrapper(metadata, keypair)
+
+        # Truncate
+        auth_wrapper_truncated = copy(auth_wrapper)
+        auth_wrapper_truncated.serialized_payload = b''
+        raw_auth_wrapper_truncated = auth_wrapper_truncated.SerializeToString()
 
         # Construct pubkey_digest
-        pubkey = keypair.get_pubkey()
-        pubkey_digest = sha256(pubkey).hexdigest()
-        response = self.keyserver_client.commit(pubkey_digest, auth_wrapper_digest)
+        response = self.keyserver_client.put_metadata_no_token(address, raw_auth_wrapper_truncated)
         self.assertEqual(response.status_code, 402)
 
         # Parse PaymentRequest and PaymentDetails
@@ -58,9 +62,7 @@ class TestPop(TestCase):
         payment_ack = PaymentACK.FromString(response.content)
 
         token = response.headers["Authorization"]
-        print(token)
 
-        raw_metadata = auth_wrapper.SerializeToString()
-        response = self.keyserver_client.put_metadata(address, raw_metadata, token)
-        print(response.text)
+        raw_auth_wrapper = auth_wrapper.SerializeToString()
+        response = self.keyserver_client.put_metadata(address, raw_auth_wrapper, token)
         self.assertEqual(response.status_code, 200)

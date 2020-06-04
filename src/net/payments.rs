@@ -208,22 +208,9 @@ impl IntoResponse for PaymentRequestError {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct CommitQuery {
-    pubkey_digest: String,
-    metadata_digest: String,
-}
-
-pub async fn commit(json: CommitQuery) -> Result<Response<Body>, PaymentRequestError> {
-    // Parse query
-    let pubkey_digest_raw =
-        hex::decode(json.pubkey_digest).map_err(PaymentRequestError::PubkeyDigestHex)?;
-    let metadata_digest_raw =
-        hex::decode(json.metadata_digest).map_err(PaymentRequestError::MetadataDigestHex)?;
-
-    // Generate output
-
-    let commitment_preimage = [pubkey_digest_raw, metadata_digest_raw].concat();
+pub fn construct_payment_response(pub_key_hash: &[u8], metadata_digest: &[u8]) -> Response<Body> {
+    // Construct metadata commitment
+    let commitment_preimage = [pub_key_hash, metadata_digest].concat();
     let commitment = Sha256::digest(&commitment_preimage);
     let op_return_pre: [u8; 2] = [106, COMMITMENT_SIZE as u8];
     let script = [&op_return_pre[..], commitment.as_slice()].concat();
@@ -263,8 +250,8 @@ pub async fn commit(json: CommitQuery) -> Result<Response<Body>, PaymentRequestE
     let mut payment_invoice_raw = Vec::with_capacity(payment_invoice.encoded_len());
     payment_invoice.encode(&mut payment_invoice_raw).unwrap();
 
-    Ok(Response::builder()
+    Response::builder()
         .status(402)
         .body(Body::from(payment_invoice_raw))
-        .unwrap())
+        .unwrap()
 }
