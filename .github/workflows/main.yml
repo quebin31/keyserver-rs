@@ -95,7 +95,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install bitcoind
       - name: Run bitcoind
-        run: bitcoind -daemon -regtest -zmqpubhashblock=tcp://127.0.0.1:28332 -rpcbind=127.0.0.1 -rpcport=18443 -rpcallowip=0.0.0.0/0 -rpcuser=user -rpcpassword=password
+        run: |
+          bitcoind -daemon -regtest -zmqpubhashblock=tcp://127.0.0.1:28332 -rpcbind=127.0.0.1 -rpcport=18443 -rpcallowip=0.0.0.0/0 -rpcuser=user -rpcpassword=password
+          bitcoin-cli generatetoaddress 101 $(bitcoin-cli getnewaddress)
       - name: Install Python
         uses: actions/setup-python@v2
         with:
@@ -109,6 +111,5 @@ jobs:
         run: ./target/debug/keyserver &
       - name: Run Basic System Tests
         run: |
-          cargo run &
           cd ./tests
           python -m unittest basic
