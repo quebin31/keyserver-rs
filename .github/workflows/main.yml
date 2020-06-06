@@ -97,7 +97,7 @@ jobs:
       - name: Run bitcoind
         run: |
           bitcoind -daemon -regtest -server -zmqpubhashblock=tcp://127.0.0.1:28332 -rpcbind=127.0.0.1 -rpcport=18443 -rpcallowip=0.0.0.0/0 -rpcuser=user -rpcpassword=password
-          bitcoin-cli -regtest generatetoaddress 101 $(bitcoin-cli -regtest getnewaddress)
+          bitcoin-cli -regtest -rpcuser=user -rpcpassword=password generatetoaddress 101 $(bitcoin-cli -regtest -rpcuser=user -rpcpassword=password getnewaddress)
       - name: Install Python
         uses: actions/setup-python@v2
         with:
