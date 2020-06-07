@@ -3,24 +3,76 @@ name: CI
 on: [push, pull_request]
 
 jobs:
-  check:
-    name: cargo check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install ZMQ
-        run: sudo apt-get install libzmq3-dev
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          metadata: minimal
-          toolchain: stable
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
+  # check:
+  #   name: cargo check
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Install ZMQ
+  #       run: sudo apt-get install libzmq3-dev
+  #     - uses: actions/checkout@v2
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         metadata: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - uses: actions-rs/cargo@v1
+  #       with:
+  #         command: check
 
-  test:
-    name: cargo test
+  # test:
+  #   name: cargo test
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Install ZMQ
+  #       run: sudo apt-get install libzmq3-dev
+  #     - uses: actions/checkout@v2
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - uses: actions-rs/cargo@v1
+  #       with:
+  #         command: test
+
+  # fmt:
+  #   name: cargo fmt
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Install ZMQ
+  #       run: sudo apt-get install libzmq3-dev
+  #     - uses: actions/checkout@v2
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - run: rustup component add rustfmt
+  #     - uses: actions-rs/cargo@v1
+  #       with:
+  #         command: fmt
+  #         args: --all -- --check
+
+  # clippy:
+  #   name: cargo clippy
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - name: Install ZMQ
+  #       run: sudo apt-get install libzmq3-dev
+  #     - uses: actions/checkout@v2
+  #     - uses: actions-rs/toolchain@v1
+  #       with:
+  #         profile: minimal
+  #         toolchain: stable
+  #         override: true
+  #     - run: rustup component add clippy
+  #     - uses: actions-rs/cargo@v1
+  #       with:
+  #         command: clippy
+  #         args: -- -D warnings
+
+  regtest:
+    name: regression tests
     runs-on: ubuntu-latest
     steps:
       - name: Install ZMQ
@@ -33,40 +85,33 @@ jobs:
           override: true
       - uses: actions-rs/cargo@v1
         with:
-          command: test
-
-  fmt:
-    name: cargo fmt
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install ZMQ
-        run: sudo apt-get install libzmq3-dev
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
+          command: build
+      - name: Build Keyserver
+        run: |
+          cargo build
+      - name: Install Bitcoin Cash
+        run: | 
+          sudo add-apt-repository ppa:bitcoin-abc/ppa
+          sudo apt-get update
+          sudo apt-get install bitcoind
+      - name: Run bitcoind
+        run: bitcoind -daemon -regtest -server -zmqpubhashblock=tcp://127.0.0.1:28332 -rpcbind=127.0.0.1 -rpcport=18443 -rpcallowip=0.0.0.0/0 -rpcuser=user -rpcpassword=password
+      - name: Fund wallet
+        run: |
+          sleep 30
+          bitcoin-cli -regtest -rpcuser=user -rpcpassword=password generatetoaddress 101 $(bitcoin-cli -regtest -rpcuser=user -rpcpassword=password getnewaddress)
+      - name: Install Python
+        uses: actions/setup-python@v2
         with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-
-  clippy:
-    name: cargo clippy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Install ZMQ
-        run: sudo apt-get install libzmq3-dev
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - run: rustup component add clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+          python-version: 3.7
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          cd ./tests
+          pip install -r requirements.txt
+      - name: Run keyserver A
+        run: ./target/debug/keyserver &
+      - name: Run Basic System Tests
+        run: |
+          cd ./tests
+          python -m unittest basic

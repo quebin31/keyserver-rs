@@ -6,15 +6,10 @@ use std::{
 use bitcoin::{
     consensus::encode::Error as BitcoinError, util::psbt::serialize::Deserialize, Transaction,
 };
-use bitcoincash_addr::{
-    base58::DecodingError as Base58Error,
-    cashaddr::{DecodingError as CashAddrError, EncodingError as AddrEncodingError},
-    Address,
-};
+use bitcoincash_addr::{cashaddr::EncodingError as AddrEncodingError, Address};
 use cashweb::bitcoin_client::{BitcoinClient, HttpConnector, NodeError};
 use cashweb::{
-    payments::PreprocessingError,
-    protobuf::bip70::{PaymentAck, PaymentDetails, PaymentRequest},
+    payments::{bip70::*, PreprocessingError},
     token::schemes::chain_commitment::*,
 };
 use prost::Message as _;
@@ -28,13 +23,10 @@ use warp::{
     reject::Reject,
 };
 
-use super::{address_decode, IntoResponse};
-use crate::{
-    models::bip70::{Output, Payment},
-    METADATA_PATH, PAYMENTS_PATH, SETTINGS,
-};
+use super::IntoResponse;
+use crate::{METADATA_PATH, PAYMENTS_PATH, SETTINGS};
 
-pub const COMMITMENT_PREIMAGE_SIZE: usize = 20 + 32;
+pub const COMMITMENT_PREIMAGE_SIZE: usize = 32 + 32;
 pub const COMMITMENT_SIZE: usize = 32;
 pub const OP_RETURN: u8 = 106;
 
@@ -110,7 +102,7 @@ pub async fn process_payment(
     }
 
     // Get address
-    let pub_key_hash = &commitment_preimage[..20];
+    let pub_key_hash = &commitment_preimage[..32];
     let address = Address {
         body: pub_key_hash.to_vec(),
         ..Default::default()
@@ -118,7 +110,7 @@ pub async fn process_payment(
     let addr_str = address.encode().map_err(PaymentError::Address)?;
 
     // Extract metadata
-    let address_metadata_hash = &commitment_preimage[20..COMMITMENT_PREIMAGE_SIZE];
+    let address_metadata_hash = &commitment_preimage[32..COMMITMENT_PREIMAGE_SIZE];
 
     let expected_commitment = construct_commitment(pub_key_hash, address_metadata_hash);
 
@@ -177,19 +169,21 @@ pub async fn process_payment(
 #[derive(Debug)]
 pub enum PaymentRequestError {
     IncorrectLengthPreimage,
-    Address(CashAddrError, Base58Error),
     Node(NodeError),
     UnepxectedNetwork,
-    Hex(hex::FromHexError),
+    PubkeyDigestHex(hex::FromHexError),
+    MetadataDigestHex(hex::FromHexError),
 }
 
 impl fmt::Display for PaymentRequestError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            Self::Address(cash_err, base58_err) => {
-                f.write_str(&format!("{}, {}", cash_err, base58_err))
+            Self::PubkeyDigestHex(err) => {
+                f.write_str(&format!("public key digest failed to decodel {}", err))
             }
-            Self::Hex(err) => err.fmt(f),
+            Self::MetadataDigestHex(err) => {
+                f.write_str(&format!("metadata digest failed to decodel {}", err))
+            }
             Self::Node(err) => err.fmt(f),
             Self::UnepxectedNetwork => f.write_str("unexpected network"),
             Self::IncorrectLengthPreimage => f.write_str("incorrect length preimage"),
@@ -202,9 +196,9 @@ impl Reject for PaymentRequestError {}
 impl IntoResponse for PaymentRequestError {
     fn to_status(&self) -> u16 {
         match self {
-            Self::Address(_, _) => 400,
-            Self::Hex(_) => 400,
+            Self::PubkeyDigestHex(_) => 400,
             Self::IncorrectLengthPreimage => 400,
+            Self::MetadataDigestHex(_) => 400,
             Self::Node(err) => match err {
                 NodeError::Rpc(_) => 400,
                 _ => 500,
@@ -214,21 +208,9 @@ impl IntoResponse for PaymentRequestError {
     }
 }
 
-#[derive(Debug, Deserialize)]
-pub struct CommitQuery {
-    address: String,
-    metadata_digest: String,
-}
-
-pub async fn commit(query: CommitQuery) -> Result<Response<Body>, PaymentRequestError> {
-    // Parse query
-    let addr =
-        address_decode(&query.address).map_err(|err| PaymentRequestError::Address(err.0, err.1))?;
-    let metadata_digest_raw =
-        hex::decode(query.metadata_digest).map_err(PaymentRequestError::Hex)?;
-
-    // Generate output
-    let commitment_preimage = [addr.as_body(), &metadata_digest_raw].concat();
+pub fn construct_payment_response(pub_key_hash: &[u8], metadata_digest: &[u8]) -> Response<Body> {
+    // Construct metadata commitment
+    let commitment_preimage = [pub_key_hash, metadata_digest].concat();
     let commitment = Sha256::digest(&commitment_preimage);
     let op_return_pre: [u8; 2] = [106, COMMITMENT_SIZE as u8];
     let script = [&op_return_pre[..], commitment.as_slice()].concat();
@@ -268,8 +250,8 @@ pub async fn commit(query: CommitQuery) -> Result<Response<Body>, PaymentRequest
     let mut payment_invoice_raw = Vec::with_capacity(payment_invoice.encoded_len());
     payment_invoice.encode(&mut payment_invoice_raw).unwrap();
 
-    Ok(Response::builder()
+    Response::builder()
         .status(402)
         .body(Body::from(payment_invoice_raw))
-        .unwrap())
+        .unwrap()
 }

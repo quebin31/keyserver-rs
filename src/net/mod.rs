@@ -12,10 +12,14 @@ use std::{convert::Infallible, fmt};
 
 use bitcoincash_addr::Address;
 use warp::{
+    filters::body::BodyDeserializeError,
     http::Response,
     hyper::Body,
     reject::{PayloadTooLarge, Reject, Rejection},
 };
+
+pub const SAMPLING: &str = "Sample-Peers";
+pub const HEADER_VALUE_FALSE: &str = "false";
 
 #[derive(Debug)]
 pub struct AddressDecode(
@@ -31,6 +35,7 @@ impl fmt::Display for AddressDecode {
     }
 }
 
+/// Helper method for decoding an address string.
 pub fn address_decode(addr_str: &str) -> Result<Address, AddressDecode> {
     // Convert address
     Address::decode(&addr_str).map_err(|(cash_err, base58_err)| AddressDecode(cash_err, base58_err))
@@ -42,9 +47,12 @@ impl IntoResponse for AddressDecode {
     }
 }
 
+/// Helper trait for converting errors into a response.
 pub trait IntoResponse: fmt::Display + Sized {
+    /// Convert error into a status code.
     fn to_status(&self) -> u16;
 
+    /// Convert error into a `Response`.
     fn into_response(&self) -> Response<Body> {
         let status = self.to_status();
 
@@ -62,12 +70,25 @@ pub trait IntoResponse: fmt::Display + Sized {
     }
 }
 
+/// Global rejection handler, takes an rejection and converts it into a `Response`.
 pub async fn handle_rejection(err: Rejection) -> Result<Response<Body>, Infallible> {
+    if let Some(err) = err.find::<BodyDeserializeError>() {
+        log::error!("{:#?}", err);
+        return Ok(Response::builder()
+            .status(400)
+            .body(Body::from("unexpected body serialization"))
+            .unwrap());
+    }
+
     if let Some(err) = err.find::<AddressDecode>() {
         log::error!("{:#?}", err);
         return Ok(err.into_response());
     }
-    if let Some(err) = err.find::<MetadataError>() {
+    if let Some(err) = err.find::<GetMetadataError>() {
+        log::error!("{:#?}", err);
+        return Ok(err.into_response());
+    }
+    if let Some(err) = err.find::<PutMetadataError>() {
         log::error!("{:#?}", err);
         return Ok(err.into_response());
     }
@@ -101,5 +122,6 @@ pub async fn handle_rejection(err: Rejection) -> Result<Response<Body>, Infallib
         return Ok(Response::builder().status(404).body(Body::empty()).unwrap());
     }
 
+    log::error!("unexpected error found {:?}", err);
     Ok(Response::builder().status(500).body(Body::empty()).unwrap())
 }

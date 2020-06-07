@@ -35,7 +35,6 @@ use net::{payments, protection};
 use peering::{PeerHandler, TokenCache};
 use settings::Settings;
 
-const COMMIT_PATH: &str = "commit";
 const METADATA_PATH: &str = "keys";
 const PEERS_PATH: &str = "peers";
 pub const PAYMENTS_PATH: &str = "payments";
@@ -163,12 +162,11 @@ async fn main() {
     let metadata_get = warp::path(METADATA_PATH)
         .and(addr_base)
         .and(warp::get())
-        .and(warp::query())
         .and(warp::header::headers_cloned())
         .and(db_state.clone())
         .and(peer_handler.clone())
-        .and_then(move |addr, query, headers, db, peer_handler| {
-            net::get_metadata(addr, query, headers, db, peer_handler).map_err(warp::reject::custom)
+        .and_then(move |addr, headers, db, peer_handler| {
+            net::get_metadata(addr, headers, db, peer_handler).map_err(warp::reject::custom)
         });
     let metadata_put = warp::path(METADATA_PATH)
         .and(addr_protected)
@@ -178,21 +176,26 @@ async fn main() {
         ))
         .and(db_state.clone())
         .and(token_cache_state)
-        .and_then(move |addr, body, token, db, token_cache| {
-            net::put_metadata(addr, body, token, db, token_cache).map_err(warp::reject::custom)
-        });
+        .and_then(
+            move |addr, auth_wrapper_raw, auth_wrapper, token_str, raw_token, db, token_cache| {
+                net::put_metadata(
+                    addr,
+                    auth_wrapper_raw,
+                    auth_wrapper,
+                    token_str,
+                    raw_token,
+                    db,
+                    token_cache,
+                )
+                .map_err(warp::reject::custom)
+            },
+        );
 
     // Peer handler
     let peers_get = warp::path(PEERS_PATH)
         .and(warp::get())
         .and(peer_handler)
         .and_then(move |peer_handler| net::get_peers(peer_handler).map_err(warp::reject::custom));
-
-    // Commitment handler
-    let commit = warp::path(COMMIT_PATH)
-        .and(warp::post())
-        .and(warp::query())
-        .and_then(move |body| net::commit(body).map_err(warp::reject::custom));
 
     // Payment handler
     let payments = warp::path(PAYMENTS_PATH)
@@ -240,7 +243,6 @@ async fn main() {
 
         // Init REST API
         let rest_api = root
-            .or(commit)
             .or(payments)
             .or(metadata_get)
             .or(metadata_put)
@@ -261,7 +263,6 @@ async fn main() {
     {
         // Init REST API
         let rest_api = root
-            .or(commit)
             .or(payments)
             .or(metadata_get)
             .or(metadata_put)
