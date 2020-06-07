@@ -110,14 +110,13 @@ jobs:
           cd ./tests
           pip install -r requirements.txt
       - name: Run keyserver C
-        run: ./target/debug/keyserver --bind 0.0.0.0:8082 --db-path ./tests/db_c &
+        run: ./target/debug/keyserver --config ./tests/config_c &
       - name: Run keyserver B
         run: |
-          printf "[peering]\npeers = [\"127.0.0.1:8082\"]" >> config_b.toml
-          ./target/debug/keyserver --bind 0.0.0.0:8081 --config ./tests/config_b --db-path ./tests/db_b &
+          ./target/debug/keyserver --config ./tests/config_b &
       - name: Run keyserver A
         run: | 
-          ./target/debug/keyserver --config ./tests/config_a --db-path ./tests/db_a &
+          ./target/debug/keyserver --config ./tests/config_a &
       - name: Run Basic System Tests
         run: |
           cd ./tests
