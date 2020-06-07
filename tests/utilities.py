@@ -31,7 +31,7 @@ class BitcoinClient:
     def collect_inputs(self, amount: Decimal, n_bytes=200):
         """Collect inputs up to a specific amount and return them and total satoshis."""
 
-        utxos = self.connection.listunspent()
+        utxos = self.connection.listunspent(0)
         input_value = Decimal(0)
         inputs = []
         for utxo in utxos:

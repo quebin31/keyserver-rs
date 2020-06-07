@@ -99,7 +99,7 @@ jobs:
       - name: Fund wallet
         run: |
           sleep 30
-          bitcoin-cli -regtest -rpcuser=user -rpcpassword=password generatetoaddress 101 $(bitcoin-cli -regtest -rpcuser=user -rpcpassword=password getnewaddress)
+          bitcoin-cli -regtest -rpcuser=user -rpcpassword=password generatetoaddress 201 $(bitcoin-cli -regtest -rpcuser=user -rpcpassword=password getnewaddress)
       - name: Install Python
         uses: actions/setup-python@v2
         with:
