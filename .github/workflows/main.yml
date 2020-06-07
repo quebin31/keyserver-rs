@@ -117,7 +117,7 @@ jobs:
           python -m unittest basic
       - name: Run keyserver B
         run: |
-          echo "peers = [127.0.0.1:8081]" >> config_b.toml
+          echo "peers = [\"127.0.0.1:8081\"]" >> config_b.toml
           ./target/debug/keyserver --bind 0.0.0.0:8081 --config ./config_b.toml &
       - name: Run Peering System Tests
         run: |

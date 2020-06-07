@@ -79,7 +79,7 @@ class TestPop(TestCase):
 
     def test_pull_gossip(self):
         # Put metadata to keyserver B
-        self.put_metadata(keyserver_client_b)
+        raw_auth_wrapper, address = self.put_metadata(keyserver_client_b)
 
         # Get from keyserver A
         response = keyserver_client_a.get_metadata(address)
