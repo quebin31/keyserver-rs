@@ -88,7 +88,8 @@ class BitcoinClient:
     def generate_blocks(self, count: int):
         """Generate two blocks."""
 
-        self.connection.generate(count)
+        address = self.generate_address()
+        self.connection.generatetoaddress(count, address)
 
 def generate_random_keypair():
     """Generate a random bitcoin address, a ECDSA keypair."""

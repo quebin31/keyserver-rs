@@ -2,6 +2,7 @@ from requests import get, put, post, Response
 
 KEYS_URL = "{}/keys/{}"
 PAYMENTS_URL = "{}/payments"
+PEERS_URL = "{}/peers"
 
 class KeyserverClient:
     def __init__(self, url: str):
@@ -35,4 +36,8 @@ class KeyserverClient:
             "Accept": "application/bitcoincash-paymentack"
         }
         response = post(url=PAYMENTS_URL.format(self.url), data=raw_payment, headers=headers)
+        return response
+
+    def get_peers(self) -> Response:
+        response = get(url=PEERS_URL.format(self.url))
         return response

@@ -23,3 +23,7 @@ test_db/
 example/__pycache__/
 
 .vscode/
+
+tests/db_a/
+tests/db_b/
+tests/db_c/

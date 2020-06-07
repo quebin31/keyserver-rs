@@ -1,6 +1,7 @@
 from unittest import TestCase
 from utilities import *
 from paymentrequest_pb2 import *
+from keyserver_pb2 import *
 from keyserver_client import KeyserverClient
 from copy import copy
 from time import sleep
@@ -8,11 +9,13 @@ from time import sleep
 bitcoin_client = BitcoinClient("127.0.0.1", 18443)
 keyserver_client_a = KeyserverClient("http://0.0.0.0:8080")
 keyserver_client_b = KeyserverClient("http://0.0.0.0:8081")
+keyserver_client_c = KeyserverClient("http://0.0.0.0:8082")
 
 """
-This test presumes that there are three keyservers A, B, C, that keyserver A has peers [keyserver_b], that
-keyserver B has peers [keyserver_c], and keyserver C has no peers.
+This test presumes that there are three keyservers A, B, C, that keyserver A has initial peers [keyserver_b], that
+keyserver B has initial peers [keyserver_c], and keyserver C has no peers.
 """
+
 
 class TestPop(TestCase):
     def put_metadata(self, keyserver_client):
@@ -55,7 +58,6 @@ class TestPop(TestCase):
 
         return raw_auth_wrapper, address
 
-
     def test_push_gossip(self):
         """Obtain a POP token, PUT with it then GET on other server"""
 
@@ -85,3 +87,29 @@ class TestPop(TestCase):
         response = keyserver_client_a.get_metadata(address)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, raw_auth_wrapper)
+
+    def test_peer_list_c(self):
+        response = keyserver_client_c.get_peers()
+        self.assertEqual(response.status_code, 200)
+
+        peers = Peers.FromString(response.content)
+        self.assertEqual(peers, Peers())
+
+    def test_peer_list_b(self):
+        response = keyserver_client_b.get_peers()
+        self.assertEqual(response.status_code, 200)
+
+        peers = Peers.FromString(response.content)
+        expected_peers = Peers(peers=[Peer(url="http://127.0.0.1:8082")])
+
+        self.assertEqual(peers, expected_peers)
+
+    def test_peer_list_a(self):
+        response = keyserver_client_a.get_peers()
+        self.assertEqual(response.status_code, 200)
+
+        peers = Peers.FromString(response.content)
+        expected_peers = Peers(
+            peers=[Peer(url="http://127.0.0.1:8081"), Peer(url="http://127.0.0.1:8082")])
+
+        self.assertEqual(peers, expected_peers)
