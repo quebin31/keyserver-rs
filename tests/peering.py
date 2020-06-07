@@ -3,36 +3,19 @@ from utilities import *
 from paymentrequest_pb2 import *
 from keyserver_client import KeyserverClient
 from copy import copy
+from time import sleep
 
 bitcoin_client = BitcoinClient("127.0.0.1", 18443)
-keyserver_client = KeyserverClient("http://0.0.0.0:8080")
+keyserver_client_a = KeyserverClient("http://0.0.0.0:8080")
+keyserver_client_b = KeyserverClient("http://0.0.0.0:8081")
 
+"""
+This test presumes that there are three keyservers A, B, C, that keyserver A has peers [keyserver_b], that
+keyserver B has peers [keyserver_c], and keyserver C has no peers.
+"""
 
 class TestPop(TestCase):
-    def test_get_missing(self):
-        """Get random missing metadata."""
-
-        address, _ = generate_random_keypair()
-        response = keyserver_client.get_metadata(address)
-        self.assertEqual(response.status_code, 404)
-
-    def test_put_without_pop(self):
-        """PUT without a POP token"""
-
-        # Construct auth wrapper
-        address, keypair = generate_random_keypair()
-        metadata = construct_dummy_metadata()
-        auth_wrapper, _ = construct_auth_wrapper(metadata, keypair)
-
-        raw_auth_wrapper = auth_wrapper.SerializeToString()
-        response = keyserver_client.put_metadata_no_token(
-            address, raw_auth_wrapper)
-        self.assertEqual(response.status_code, 402)
-        payment_request = PaymentRequest.FromString(response.content)
-
-    def test_put_get_using_pop(self):
-        """Obtain a POP token, PUT with it then GET"""
-
+    def put_metadata(self, keyserver_client):
         # Construct auth wrapper
         address, keypair = generate_random_keypair()
         metadata = construct_dummy_metadata()
@@ -70,7 +53,35 @@ class TestPop(TestCase):
             address, raw_auth_wrapper, token)
         self.assertEqual(response.status_code, 200)
 
-        response = keyserver_client.get_metadata(
-            address)
+        return raw_auth_wrapper, address
+
+
+    def test_push_gossip(self):
+        """Obtain a POP token, PUT with it then GET on other server"""
+
+        raw_auth_wrapper, address = self.put_metadata(keyserver_client_a)
+
+        # Generate one block
+        bitcoin_client.generate_blocks(1)
+
+        # Check that it's missing after one block
+        response = keyserver_client_b.get_metadata(address)
+        self.assertEqual(response.status_code, 404)
+
+        # Generate another block
+        bitcoin_client.generate_blocks(1)
+        sleep(1)
+
+        # Check that it's missing after one block
+        response = keyserver_client_b.get_metadata(address)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, raw_auth_wrapper)
+
+    def test_pull_gossip(self):
+        # Put metadata to keyserver B
+        self.put_metadata(keyserver_client_b)
+
+        # Get from keyserver A
+        response = keyserver_client_a.get_metadata(address)
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.content, raw_auth_wrapper)
