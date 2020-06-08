@@ -112,11 +112,11 @@ jobs:
         run: ./target/debug/keyserver --config ./tests/config_c &
       - name: Run keyserver B
         run: |
-          sleep 10
+          sleep 30
           ./target/debug/keyserver --config ./tests/config_b &
       - name: Run keyserver A
         run: |
-          sleep 10
+          sleep 30
           ./target/debug/keyserver --config ./tests/config_a &
       - name: Run Basic System Tests
         run: |
