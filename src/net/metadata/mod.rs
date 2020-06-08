@@ -69,7 +69,6 @@ pub async fn put_metadata(
     addr: Address,
     auth_wrapper_raw: Bytes,
     auth_wrapper: AuthWrapper,
-    token_str: String,
     token_raw: Vec<u8>,
     db_data: Database,
     token_cache: TokenCache,
@@ -94,7 +93,7 @@ pub async fn put_metadata(
         .unwrap()?;
 
     // Put token to cache
-    token_cache.add_token(addr, token_str).await;
+    token_cache.add_token(addr).await;
 
     // Respond
     Ok(Response::builder().body(Body::empty()).unwrap())

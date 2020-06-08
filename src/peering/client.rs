@@ -124,7 +124,7 @@ where
     ) -> Result<(), PeerError> {
         let uri = Uri::from_str(&format!("{}/{}/{}", url, METADATA_PATH, addr))?;
         let request = Request::put(uri)
-            .header(AUTHORIZATION, format!("POP {}", token))
+            .header(AUTHORIZATION, token)
             .body(Body::from(raw_auth_wrapper))
             .unwrap(); // This is safe
         self.0.request(request).await?;

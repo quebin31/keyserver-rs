@@ -94,7 +94,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install bitcoind
       - name: Run bitcoind
-        run: bitcoind -daemon -regtest -server -zmqpubhashblock=tcp://127.0.0.1:28332 -rpcbind=127.0.0.1 -rpcport=18443 -rpcallowip=0.0.0.0/0 -rpcuser=user -rpcpassword=password
+        run: bitcoind -daemon -regtest -txindex -server -zmqpubhashblock=tcp://127.0.0.1:28332 -rpcbind=127.0.0.1 -rpcport=18443 -rpcallowip=0.0.0.0/0 -rpcuser=user -rpcpassword=password
       - name: Fund wallet
         run: |
           sleep 30
