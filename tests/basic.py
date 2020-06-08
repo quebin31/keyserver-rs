@@ -69,3 +69,8 @@ class TestPop(TestCase):
         response = keyserver_client.put_metadata(
             address, raw_auth_wrapper, token)
         self.assertEqual(response.status_code, 200)
+
+        response = keyserver_client.get_metadata(
+            address)
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.content, raw_auth_wrapper)

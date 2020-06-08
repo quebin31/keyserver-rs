@@ -5,6 +5,7 @@ use bytes::Bytes;
 use cashweb::bitcoin_client::HttpConnector;
 use cashweb::token::{extract_pop, schemes::chain_commitment::*};
 use http::header::HeaderMap;
+use log::info;
 use prost::Message as _;
 use sha2::{Digest, Sha256};
 use warp::{http::Response, hyper::Body, reject::Reject};
@@ -51,7 +52,7 @@ pub async fn pop_protection(
     auth_wrapper_raw: Bytes,
     header_map: HeaderMap,
     token_scheme: Arc<ChainCommitmentScheme<HttpConnector>>,
-) -> Result<(Address, Bytes, AuthWrapper, String, Vec<u8>), ProtectionError> {
+) -> Result<(Address, Bytes, AuthWrapper, Vec<u8>), ProtectionError> {
     let auth_wrapper =
         AuthWrapper::decode(auth_wrapper_raw.clone()).map_err(ProtectionError::Decode)?;
 
@@ -66,17 +67,12 @@ pub async fn pop_protection(
 
     match extract_pop(&header_map) {
         Some(pop_token) => {
+            info!("found token {}", pop_token);
             let raw_token = token_scheme
                 .validate_token(&pub_key_hash, &metadata_hash, pop_token)
                 .await
                 .map_err(ProtectionError::Validation)?;
-            Ok((
-                addr,
-                auth_wrapper_raw,
-                auth_wrapper,
-                pop_token.to_string(),
-                raw_token,
-            ))
+            Ok((addr, auth_wrapper_raw, auth_wrapper, raw_token))
         }
         None => Err(ProtectionError::MissingToken(
             pub_key_hash.to_vec(),

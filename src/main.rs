@@ -177,12 +177,11 @@ async fn main() {
         .and(db_state.clone())
         .and(token_cache_state)
         .and_then(
-            move |addr, auth_wrapper_raw, auth_wrapper, token_str, raw_token, db, token_cache| {
+            move |addr, auth_wrapper_raw, auth_wrapper, raw_token, db, token_cache| {
                 net::put_metadata(
                     addr,
                     auth_wrapper_raw,
                     auth_wrapper,
-                    token_str,
                     raw_token,
                     db,
                     token_cache,

@@ -15,6 +15,7 @@ from decimal import Decimal
 
 SATS_PER_BITCOIN = 100_000_000
 
+
 class BitcoinClient:
     sats_per_byte = Decimal(1) / 10_000_000
 
@@ -30,7 +31,7 @@ class BitcoinClient:
     def collect_inputs(self, amount: Decimal, n_bytes=200):
         """Collect inputs up to a specific amount and return them and total satoshis."""
 
-        utxos = self.connection.listunspent()
+        utxos = self.connection.listunspent(0)
         input_value = Decimal(0)
         inputs = []
         for utxo in utxos:
@@ -75,21 +76,20 @@ class BitcoinClient:
 
         raw_tx = self.generate_tx_from_payment_request(payment_details)
         payment = Payment(merchant_data=payment_details.merchant_data,
-                  transactions=[raw_tx])
+                          transactions=[raw_tx])
         return payment
 
-def construct_client():
-    """Construct bitcoin client connected to registry test."""
-    bitcoin.SelectParams("regtest")
+    def generate_address(self):
+        """Get new address."""
 
-    # Init Bitcoin RPC
-    rpc_user = "user"
-    rpc_password = "password"
-    rpc_connection = AuthServiceProxy(
-        "http://%s:%s@127.0.0.1:18443" % (rpc_user, rpc_password))
+        address = self.connection.getnewaddress()
+        return address
 
-    return rpc_connection
+    def generate_blocks(self, count: int):
+        """Generate two blocks."""
 
+        address = self.generate_address()
+        self.connection.generatetoaddress(count, address)
 
 def generate_random_keypair():
     """Generate a random bitcoin address, a ECDSA keypair."""
@@ -132,6 +132,7 @@ def construct_auth_wrapper(metadata: AddressMetadata, keypair: CECKey):
     auth_wrapper = AuthWrapper(
         pub_key=public_key, serialized_payload=raw_metadata, scheme=1, signature=signature, payload_digest=digest)
     return auth_wrapper, digest
+
 
 def construct_auth_wrapper_truncated(metadata: AddressMetadata, keypair: CECKey):
     """Return the complete AuthWrapper object and the digest of the metadata."""
