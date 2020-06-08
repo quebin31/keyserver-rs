@@ -5,10 +5,10 @@ use bytes::Bytes;
 use cashweb::bitcoin_client::HttpConnector;
 use cashweb::token::{extract_pop, schemes::chain_commitment::*};
 use http::header::HeaderMap;
+use log::info;
 use prost::Message as _;
 use sha2::{Digest, Sha256};
 use warp::{http::Response, hyper::Body, reject::Reject};
-use log::info;
 
 use crate::{models::wrapper::AuthWrapper, net::payments};
 
@@ -72,12 +72,7 @@ pub async fn pop_protection(
                 .validate_token(&pub_key_hash, &metadata_hash, pop_token)
                 .await
                 .map_err(ProtectionError::Validation)?;
-            Ok((
-                addr,
-                auth_wrapper_raw,
-                auth_wrapper,
-                raw_token,
-            ))
+            Ok((addr, auth_wrapper_raw, auth_wrapper, raw_token))
         }
         None => Err(ProtectionError::MissingToken(
             pub_key_hash.to_vec(),
