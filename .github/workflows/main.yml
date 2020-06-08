@@ -87,8 +87,7 @@ jobs:
         with:
           command: build
       - name: Build Keyserver
-        run: |
-          cargo build
+        run: cargo build
       - name: Install Bitcoin Cash
         run: | 
           sudo add-apt-repository ppa:bitcoin-abc/ppa
@@ -113,9 +112,11 @@ jobs:
         run: ./target/debug/keyserver --config ./tests/config_c &
       - name: Run keyserver B
         run: |
+          sleep 10
           ./target/debug/keyserver --config ./tests/config_b &
       - name: Run keyserver A
-        run: | 
+        run: |
+          sleep 10
           ./target/debug/keyserver --config ./tests/config_a &
       - name: Run Basic System Tests
         run: |
