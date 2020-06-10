@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/cashweb/keyserver-rs/actions">
-    <img alt="Build Status" src="https://github.com/cashweb/keyserver-rs/workflows/CI/badge.svg">
+  <a href="https://github.com/hlb8122/line-reader/actions">
+    <img alt="Build Status" src="https://github.com/hlb8122/line-reader/workflows/CI/badge.svg">
   </a>
 
   <a href="LICENSE">
@@ -20,7 +20,7 @@ This repository hosts a reference implementation of the Cash:web Keyserver proto
 
 ## Why not existing systems?
 
-Traditional keyservers are subject to certificate spamming attacks. By being a first-class citizen in the cryptocurrency ecosystem, we are able to charge for key updates. This prevents an explosion of advertised certificates, and provides some funding for node operators. Other systems like OpenAlias, require that you trust the service provider is providing the correct addresses, while this keyserver cannot forge such updates. At most, a malicious keyserver can censor a particular key, in which case other keyservers in the network will provide it.
+Traditional keyservers are subject to certificate spamming attacks. By being a first-class citizen in the cryptocurrency ecosystem, we are able to charge for key updates. This prevents an explosion of advertised certificates. Other systems like OpenAlias, require that you trust the service provider is providing the correct addresses, while this keyserver cannot forge such updates. At most, a malicious keyserver can censor a particular key, in which case other keyservers in the network will provide it.
 
 ## Running a Server
 

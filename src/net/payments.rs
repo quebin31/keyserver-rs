@@ -3,17 +3,18 @@ use std::{
     time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
-use bitcoin::{
-    consensus::encode::Error as BitcoinError, util::psbt::serialize::Deserialize, Transaction,
-};
 use bitcoincash_addr::{cashaddr::EncodingError as AddrEncodingError, Address};
 use cashweb::bitcoin_client::{BitcoinClient, HttpConnector, NodeError};
 use cashweb::{
+    bitcoin::{
+        transaction::{DecodeError as TransactionDecodeError, Transaction},
+        Decodable,
+    },
     payments::{bip70::*, PreprocessingError},
     token::schemes::chain_commitment::*,
 };
 use prost::Message as _;
-use sha2::{Digest, Sha256};
+use ring::digest::{digest, SHA256};
 use warp::{
     http::{
         header::{AUTHORIZATION, LOCATION},
@@ -34,7 +35,7 @@ pub const OP_RETURN: u8 = 106;
 pub enum PaymentError {
     Preprocess(PreprocessingError),
     MissingCommitment,
-    MalformedTx(BitcoinError),
+    MalformedTx(TransactionDecodeError),
     MissingMerchantData,
     Node(NodeError),
     IncorrectLengthPreimage,
@@ -84,10 +85,13 @@ pub async fn process_payment(
     bitcoin_client: BitcoinClient<HttpConnector>,
 ) -> Result<Response<Body>, PaymentError> {
     // Deserialize transactions
-    let txs_res: Result<Vec<Transaction>, BitcoinError> = payment
+    let txs_res: Result<Vec<(Transaction, Vec<u8>)>, _> = payment
         .transactions
         .iter()
-        .map(|raw_tx| Transaction::deserialize(raw_tx))
+        .map(|raw_tx| {
+            let digest: Vec<u8> = digest(&SHA256, &raw_tx).as_ref().to_vec();
+            Transaction::decode(&mut raw_tx.as_slice()).map(move |tx| (tx, digest))
+        })
         .collect();
     let txs = txs_res.map_err(PaymentError::MalformedTx)?;
 
@@ -116,12 +120,12 @@ pub async fn process_payment(
 
     let (tx_id, vout) = txs
         .iter()
-        .find_map(|tx| {
-            tx.output
+        .find_map(|(tx, tx_id)| {
+            tx.outputs
                 .iter()
                 .enumerate()
                 .find_map(|(vout, output)| {
-                    let raw_script = output.script_pubkey.to_bytes();
+                    let raw_script = output.script.as_bytes();
                     if raw_script.len() == 2 + COMMITMENT_SIZE
                         && raw_script[0] == OP_RETURN
                         && raw_script[1] == COMMITMENT_SIZE as u8
@@ -132,11 +136,7 @@ pub async fn process_payment(
                         None
                     }
                 })
-                .map(|vout| {
-                    let mut tx_id = tx.txid().to_vec();
-                    tx_id.reverse();
-                    (tx_id, vout)
-                })
+                .map(|vout| (tx_id, vout))
         })
         .ok_or(PaymentError::MissingCommitment)?;
 
@@ -211,9 +211,9 @@ impl IntoResponse for PaymentRequestError {
 pub fn construct_payment_response(pub_key_hash: &[u8], metadata_digest: &[u8]) -> Response<Body> {
     // Construct metadata commitment
     let commitment_preimage = [pub_key_hash, metadata_digest].concat();
-    let commitment = Sha256::digest(&commitment_preimage);
+    let commitment = digest(&SHA256, &commitment_preimage);
     let op_return_pre: [u8; 2] = [106, COMMITMENT_SIZE as u8];
-    let script = [&op_return_pre[..], commitment.as_slice()].concat();
+    let script = [&op_return_pre[..], commitment.as_ref()].concat();
     let output = Output {
         amount: Some(SETTINGS.payments.token_fee),
         script,

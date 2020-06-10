@@ -1,9 +1,7 @@
 #[macro_use]
 extern crate clap;
-#[macro_use]
 extern crate serde;
 
-pub mod bitcoin;
 pub mod db;
 pub mod models;
 pub mod net;

@@ -4,8 +4,6 @@ use clap::App;
 use config::{Config, ConfigError, File};
 use serde::Deserialize;
 
-use crate::bitcoin::Network;
-
 const FOLDER_DIR: &str = ".keyserver";
 const DEFAULT_BIND: &str = "127.0.0.1:8080";
 const DEFAULT_RPC_ADDR: &str = "http://127.0.0.1:18443";
@@ -74,7 +72,7 @@ pub struct Settings {
     #[cfg(feature = "monitoring")]
     pub bind_prom: SocketAddr,
     pub db_path: String,
-    pub network: Network,
+    pub network: String,
     pub bitcoin_rpc: BitcoinRpc,
     pub limits: Limits,
     pub payments: Payment,
