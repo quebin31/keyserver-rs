@@ -7,8 +7,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/hlb8122/line-reader/actions">
-    <img alt="Build Status" src="https://github.com/hlb8122/line-reader/workflows/CI/badge.svg">
+  <a href="https://github.com/cashweb/keyserver-rs/actions">
+    <img alt="Build Status" src="https://github.com/cashweb/keyserver-rs/workflows/CI/badge.svg">
   </a>
 
   <a href="LICENSE">
