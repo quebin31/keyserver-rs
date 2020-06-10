@@ -108,8 +108,8 @@ class TestPop(TestCase):
         response = keyserver_client_a.get_peers()
         self.assertEqual(response.status_code, 200)
 
-        peers = Peers.FromString(response.content)
-        expected_peers = Peers(
-            peers=[Peer(url="http://127.0.0.1:8081"), Peer(url="http://127.0.0.1:8082")])
+        peers = set(Peers.FromString(response.content).peers)
+
+        expected_peers = set([Peer(url="http://127.0.0.1:8081"), Peer(url="http://127.0.0.1:8082")])
 
         self.assertEqual(peers, expected_peers)
