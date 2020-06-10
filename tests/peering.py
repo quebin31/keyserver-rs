@@ -16,6 +16,14 @@ This test presumes that there are three keyservers A, B, C, that keyserver A has
 keyserver B has initial peers [keyserver_c], and keyserver C has no peers.
 """
 
+def equal_ignore_order(a, b):
+    unmatched = list(b)
+    for element in a:
+        try:
+            unmatched.remove(element)
+        except ValueError:
+            return False
+    return not unmatched
 
 class TestPop(TestCase):
     def put_metadata(self, keyserver_client):
@@ -108,8 +116,8 @@ class TestPop(TestCase):
         response = keyserver_client_a.get_peers()
         self.assertEqual(response.status_code, 200)
 
-        peers = set(Peers.FromString(response.content).peers)
+        peers = Peers.FromString(response.content).peers
 
-        expected_peers = set([Peer(url="http://127.0.0.1:8081"), Peer(url="http://127.0.0.1:8082")])
+        expected_peers = [Peer(url="http://127.0.0.1:8081"), Peer(url="http://127.0.0.1:8082")]
 
-        self.assertEqual(peers, expected_peers)
+        self.assertTrue(equal_ignore_order(peers, expected_peers))
