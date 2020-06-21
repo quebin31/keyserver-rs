@@ -2,6 +2,9 @@ use lazy_static::lazy_static;
 use prometheus::{CounterVec, HistogramVec};
 use warp::filters::log::Info;
 
+#[cfg(feature = "monitoring")]
+use prometheus::{Encoder, TextEncoder};
+
 use prometheus_static_metric::make_static_metric;
 
 use crate::*;
@@ -34,10 +37,10 @@ make_static_metric! {
 
 impl From<&http::Method> for Method {
     fn from(method: &http::Method) -> Method {
-        match method {
-            &http::Method::GET => Method::get,
-            &http::Method::POST => Method::post,
-            &http::Method::PUT => Method::put,
+        match *method {
+            http::Method::GET => Method::get,
+            http::Method::POST => Method::post,
+            http::Method::PUT => Method::put,
             _ => Method::other,
         }
     }
@@ -64,7 +67,7 @@ impl From<&str> for Route {
 lazy_static! {
     // Request counter
     pub static ref HTTP_TOTAL_VEC: CounterVec = prometheus::register_counter_vec!(
-        "http_requests_total",
+        "http_request_total",
         "Total number of HTTP requests.",
         &["method", "route"]
     )
@@ -73,7 +76,7 @@ lazy_static! {
 
     // Request duration
     pub static ref HTTP_ELAPSED_VEC: HistogramVec = prometheus::register_histogram_vec!(
-        "http_request_duration_seconds",
+        "http_request_duration_milliseconds",
         "Histogram of elapsed times.",
         &["method", "route"]
     )
@@ -89,8 +92,11 @@ pub fn measure(info: Info) {
     HTTP_TOTAL.get(method).get(route).inc();
 
     // Observe duration
-    let duration_secs = info.elapsed().as_secs_f64();
-    HTTP_ELAPSED.get(method).get(route).observe(duration_secs);
+    let duration_secs = info.elapsed().as_millis();
+    HTTP_ELAPSED
+        .get(method)
+        .get(route)
+        .observe(duration_secs as f64);
 }
 
 pub fn export() -> Vec<u8> {

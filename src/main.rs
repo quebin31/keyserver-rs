@@ -21,8 +21,6 @@ use futures::prelude::*;
 use hyper::client::HttpConnector;
 use lazy_static::lazy_static;
 use log::info;
-#[cfg(feature = "monitoring")]
-use prometheus::{Encoder, TextEncoder};
 use warp::{
     http::{header, Method},
     Filter,
