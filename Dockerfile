@@ -12,7 +12,7 @@ WORKDIR /app
 COPY Cargo.toml Cargo.lock ./
 RUN mkdir src/
 RUN echo "fn main() {println!(\"failed to replace dummy build\")}" > src/main.rs
-RUN cargo build --release --features monitoring
+RUN cargo build --release --all-features
 RUN rm -f target/release/deps/keyserver*
 
 # Compile
