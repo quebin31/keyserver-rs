@@ -24,6 +24,5 @@ FROM ubuntu:latest
 RUN apt-get update && apt-get install -y libssl-dev libzmq3-dev
 
 COPY --from=cargo-build /app/target/release/keyserver /usr/local/bin/keyserver
-COPY --from=cargo-build /app/static /static
 
 ENTRYPOINT ["keyserver"]

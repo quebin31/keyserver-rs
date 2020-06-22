@@ -79,16 +79,16 @@ checksum = "cff77d8686867eceff3105329d4698d96c2391c176d5d03adc90c7389162b5b8"
 
 [[package]]
 name = "async-json-rpc"
-version = "0.1.0"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c5e40ab1e18dab57e8a9ae260a75cacc3fdecd9100ccb86810600da147f791"
+checksum = "6a5bd3c866038246c1e1c564becc7fb1b325c6ae4738e9e9c6344786d2a8c80f"
 dependencies = [
  "base64 0.12.2",
  "futures-core",
  "futures-util",
  "hyper",
  "hyper-tls",
- "serde 1.0.113",
+ "serde 1.0.114",
  "serde_json",
  "tower-service",
 ]
@@ -290,7 +290,7 @@ dependencies = [
 [[package]]
 name = "cashweb"
 version = "0.1.0-alpha.3"
-source = "git+https://github.com/cashweb/cashweb-rs#97a8f54f74c019460d6be25a3eb4a777841aa00d"
+source = "git+https://github.com/cashweb/cashweb-rs#4ffacc32e6cb7ab674c809823edc0eb89fd2c4ac"
 dependencies = [
  "cashweb-auth-wrapper",
  "cashweb-bitcoin",
@@ -303,7 +303,7 @@ dependencies = [
 [[package]]
 name = "cashweb-auth-wrapper"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/cashweb/cashweb-rs#97a8f54f74c019460d6be25a3eb4a777841aa00d"
+source = "git+https://github.com/cashweb/cashweb-rs#4ffacc32e6cb7ab674c809823edc0eb89fd2c4ac"
 dependencies = [
  "prost",
  "prost-build",
@@ -314,29 +314,29 @@ dependencies = [
 [[package]]
 name = "cashweb-bitcoin"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/cashweb/cashweb-rs#97a8f54f74c019460d6be25a3eb4a777841aa00d"
+source = "git+https://github.com/cashweb/cashweb-rs#4ffacc32e6cb7ab674c809823edc0eb89fd2c4ac"
 dependencies = [
  "bytes",
  "ring",
  "secp256k1",
- "serde 1.0.113",
+ "serde 1.0.114",
 ]
 
 [[package]]
 name = "cashweb-bitcoin-client"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/cashweb/cashweb-rs#97a8f54f74c019460d6be25a3eb4a777841aa00d"
+source = "git+https://github.com/cashweb/cashweb-rs#4ffacc32e6cb7ab674c809823edc0eb89fd2c4ac"
 dependencies = [
  "async-json-rpc",
  "hex",
- "serde 1.0.113",
+ "serde 1.0.114",
  "serde_json",
 ]
 
 [[package]]
 name = "cashweb-payments"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/cashweb/cashweb-rs#97a8f54f74c019460d6be25a3eb4a777841aa00d"
+source = "git+https://github.com/cashweb/cashweb-rs#4ffacc32e6cb7ab674c809823edc0eb89fd2c4ac"
 dependencies = [
  "bytes",
  "dashmap",
@@ -350,7 +350,7 @@ dependencies = [
 [[package]]
 name = "cashweb-relay"
 version = "0.1.0"
-source = "git+https://github.com/cashweb/cashweb-rs#97a8f54f74c019460d6be25a3eb4a777841aa00d"
+source = "git+https://github.com/cashweb/cashweb-rs#4ffacc32e6cb7ab674c809823edc0eb89fd2c4ac"
 dependencies = [
  "aes",
  "block-modes",
@@ -365,7 +365,7 @@ dependencies = [
 [[package]]
 name = "cashweb-token"
 version = "0.1.0-alpha.3"
-source = "git+https://github.com/cashweb/cashweb-rs#97a8f54f74c019460d6be25a3eb4a777841aa00d"
+source = "git+https://github.com/cashweb/cashweb-rs#4ffacc32e6cb7ab674c809823edc0eb89fd2c4ac"
 dependencies = [
  "base64 0.12.2",
  "cashweb-bitcoin",
@@ -443,7 +443,7 @@ dependencies = [
  "lazy_static",
  "nom",
  "rust-ini",
- "serde 1.0.113",
+ "serde 1.0.114",
  "serde-hjson",
  "serde_json",
  "toml 0.5.6",
@@ -696,7 +696,7 @@ dependencies = [
  "proc-macro-hack",
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -1032,7 +1032,7 @@ dependencies = [
  "rand 0.7.3",
  "ring",
  "rocksdb",
- "serde 1.0.113",
+ "serde 1.0.114",
  "subtle",
  "tokio",
  "url",
@@ -1443,7 +1443,7 @@ checksum = "6a0ffd45cf79d88737d7cc85bfd5d2894bee1139b356e616fe85dc389c61aaf7"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -1574,7 +1574,7 @@ dependencies = [
  "itertools",
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -1982,9 +1982,9 @@ checksum = "9dad3f759919b92c3068c696c15c3d17238234498bbdcc80f2c469606f948ac8"
 
 [[package]]
 name = "serde"
-version = "1.0.113"
+version = "1.0.114"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6135c78461981c79497158ef777264c51d9d0f4f3fc3a4d22b915900e42dac6a"
+checksum = "5317f7588f0a5078ee60ef675ef96735a1442132dc645eb1d12c018620ed8cd3"
 dependencies = [
  "serde_derive",
 ]
@@ -2004,13 +2004,13 @@ dependencies = [
 
 [[package]]
 name = "serde_derive"
-version = "1.0.113"
+version = "1.0.114"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "93c5eaa17d0954cb481cdcfffe9d84fcfa7a1a9f2349271e678677be4c26ae31"
+checksum = "2a0be94b04690fbaed37cddffc5c134bf537c8e3329d53e982fe04c374978f8e"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -2021,7 +2021,7 @@ checksum = "ec2c5d7e739bc07a3e73381a39d61fdb5f671c60c1df26a130690665803d8226"
 dependencies = [
  "itoa",
  "ryu",
- "serde 1.0.113",
+ "serde 1.0.114",
 ]
 
 [[package]]
@@ -2041,7 +2041,7 @@ checksum = "9ec5d77e2d4c73717816afac02670d5c4f534ea95ed430442cad02e7a6e32c97"
 dependencies = [
  "dtoa",
  "itoa",
- "serde 1.0.113",
+ "serde 1.0.114",
  "url",
 ]
 
@@ -2124,9 +2124,9 @@ dependencies = [
 
 [[package]]
 name = "syn"
-version = "1.0.32"
+version = "1.0.33"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a994520748611c17d163e81b6c4a4b13d11b7f63884362ab2efac3aa9cf16d00"
+checksum = "e8d5d96e8cbb005d6959f119f773bfaebb5684296108fb32600c00cde305b2cd"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
@@ -2182,7 +2182,7 @@ checksum = "bd80fc12f73063ac132ac92aceea36734f04a1d93c1240c6944e23a3b8841793"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -2237,7 +2237,7 @@ checksum = "f0c3acc6aa564495a0f2e1d59fab677cd7f81a19994cfc7f3ad0e64301560389"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
 ]
 
 [[package]]
@@ -2289,7 +2289,7 @@ version = "0.5.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "ffc92d160b1eef40665be3a05630d003936a3bc7da7421277846c2613e92c71a"
 dependencies = [
- "serde 1.0.113",
+ "serde 1.0.114",
 ]
 
 [[package]]
@@ -2478,7 +2478,7 @@ dependencies = [
  "multipart",
  "pin-project",
  "scoped-tls 1.0.0",
- "serde 1.0.113",
+ "serde 1.0.114",
  "serde_json",
  "serde_urlencoded",
  "tokio",
@@ -2514,7 +2514,7 @@ dependencies = [
  "log 0.4.8",
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
  "wasm-bindgen-shared",
 ]
 
@@ -2536,7 +2536,7 @@ checksum = "3156052d8ec77142051a533cdd686cba889537b213f948cd1d20869926e68e92"
 dependencies = [
  "proc-macro2 1.0.18",
  "quote 1.0.7",
- "syn 1.0.32",
+ "syn 1.0.33",
  "wasm-bindgen-backend",
  "wasm-bindgen-shared",
 ]
