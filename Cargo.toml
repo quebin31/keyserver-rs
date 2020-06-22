@@ -31,7 +31,7 @@ prometheus-static-metric = { version = "0.2.0", optional = true }
 rand = "0.7.3"
 ring = "0.16.15"
 rocksdb = "0.14.0"
-serde = { version = "1.0.113", features = ["derive"] }
+serde = { version = "1.0.114", features = ["derive"] }
 subtle = "2.2.3"
 tokio = { version = "0.2.21", features = ["blocking",  "macros", "rt-core", "rt-threaded", "sync", "time"] }
 url = "2.1.1"

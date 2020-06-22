@@ -15,7 +15,7 @@ use prost::{DecodeError, Message as _};
 use crate::{
     models::{
         keyserver::Peers,
-        wrapper::{AuthWrapper, ValidationError},
+        wrapper::{AuthWrapper, ParseError, VerifyError},
     },
     net::{HEADER_VALUE_FALSE, SAMPLING},
     METADATA_PATH,
@@ -28,10 +28,11 @@ pub struct PeeringClient<C>(Client<C, Body>);
 pub enum PeerError {
     Hyper(HyperError),
     AuthWrapperDecode(prost::DecodeError),
-    InvalidAuthWrapper(ValidationError),
+    InvalidAuthWrapper(ParseError),
     InvalidHeader(ToStrError),
     PeerDecode(DecodeError),
     Uri(InvalidUri),
+    VerifyAuthWrapper(VerifyError),
     MissingToken,
     NotFound,
 }
@@ -99,8 +100,10 @@ where
         let auth_wrapper =
             AuthWrapper::decode(raw_auth_wrapper.clone()).map_err(PeerError::AuthWrapperDecode)?;
         auth_wrapper
-            .validate()
-            .map_err(PeerError::InvalidAuthWrapper)?;
+            .parse()
+            .map_err(PeerError::InvalidAuthWrapper)?
+            .verify()
+            .map_err(PeerError::VerifyAuthWrapper)?;
         Ok((raw_auth_wrapper, token))
     }
 

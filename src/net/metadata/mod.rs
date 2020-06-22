@@ -75,8 +75,10 @@ pub async fn put_metadata(
 ) -> Result<Response<Body>, PutMetadataError> {
     // Verify signatures
     auth_wrapper
-        .validate()
-        .map_err(PutMetadataError::InvalidAuthWrapper)?;
+        .parse()
+        .map_err(PutMetadataError::InvalidAuthWrapper)?
+        .verify()
+        .map_err(PutMetadataError::VerifyAuthWrapper)?;
 
     // Wrap with database
     let database_wrapper = DatabaseWrapper {

@@ -3,13 +3,17 @@ use std::fmt;
 use rocksdb::Error as RocksError;
 use warp::reject::Reject;
 
-use crate::{models::wrapper::ValidationError, net::IntoResponse};
+use crate::{
+    models::wrapper::{ParseError, VerifyError},
+    net::IntoResponse,
+};
 
 #[derive(Debug)]
 pub enum PutMetadataError {
     Database(RocksError),
     MetadataDecode(prost::DecodeError),
-    InvalidAuthWrapper(ValidationError),
+    InvalidAuthWrapper(ParseError),
+    VerifyAuthWrapper(VerifyError),
 }
 
 impl From<RocksError> for PutMetadataError {
@@ -24,6 +28,7 @@ impl fmt::Display for PutMetadataError {
             Self::Database(err) => err.fmt(f),
             Self::MetadataDecode(err) => err.fmt(f),
             Self::InvalidAuthWrapper(err) => err.fmt(f),
+            Self::VerifyAuthWrapper(err) => err.fmt(f),
         }
     }
 }
