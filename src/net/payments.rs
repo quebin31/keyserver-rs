@@ -1,6 +1,6 @@
 use std::{
     fmt,
-    time::{Duration, SystemTime, UNIX_EPOCH},
+    time::{SystemTime, UNIX_EPOCH},
 };
 
 use bitcoincash_addr::{cashaddr::EncodingError as AddrEncodingError, Address};
