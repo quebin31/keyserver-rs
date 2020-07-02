@@ -1,11 +1,10 @@
-use std::{collections::VecDeque, sync::Arc};
+use std::{collections::VecDeque, fmt, sync::Arc};
 
 use bitcoincash_addr::Address;
-use bytes::Bytes;
 use dashmap::DashSet;
-use hyper::client::connect::Connect;
-use rand::{rngs::OsRng, seq::IteratorRandom};
+use hyper::{Body, Request, Response};
 use tokio::sync::RwLock;
+use tower_service::Service;
 
 use super::PeerHandler;
 use crate::{db::Database, SETTINGS};
@@ -32,10 +31,12 @@ impl TokenCache {
         token_blocks.front().unwrap().insert(addr); // TODO: Double check this is safe
     }
 
-    pub async fn broadcast_block<C>(&self, peer_state: &PeerHandler<C>, db: &Database)
+    pub async fn broadcast_block<S>(&self, peer_handler: &PeerHandler<S>, db: &Database)
     where
-        C: Clone + Send + Sync,
-        C: Connect + 'static,
+        S: Service<Request<Body>, Response = Response<Body>>,
+        S: Send + Clone + 'static,
+        <S as Service<Request<Body>>>::Future: Send,
+        S::Error: Send + fmt::Debug,
     {
         let mut token_blocks = self.tokens_blocks.write().await;
 
@@ -47,13 +48,13 @@ impl TokenCache {
         };
 
         // Unpack peer state
-        let peers = peer_state.peers.read().await;
-        let client = peer_state.client.clone();
+        // let peers = peer_state.peers.read().await;
+        // let client = peer_state.client.clone();
 
         // Sample peers
-        let url_choices: Vec<_> = peers
-            .iter()
-            .choose_multiple(&mut OsRng, SETTINGS.peering.fan_size);
+        // let url_choices: Vec<_> = peers
+        //     .iter()
+        //     .choose_multiple(&mut OsRng, SETTINGS.peering.fan_size);
 
         for addr in token_block.into_iter() {
             let db_wrapper = match db.get_metadata(addr.as_body()) {
@@ -61,24 +62,23 @@ impl TokenCache {
                 _ => continue,
             };
             let addr_str = addr.encode().unwrap(); // This is safe
-            let metadata = Bytes::from(db_wrapper.serialized_auth_wrapper);
 
             // Reconstruct token
             let raw_token = db_wrapper.token;
             let url_safe_config = base64::Config::new(base64::CharacterSet::UrlSafe, false);
             let token = format!("POP {}", base64::encode_config(raw_token, url_safe_config));
 
-            for url in &url_choices {
-                // TODO: Make this non-blocking
-                log::info!("pushing metadata to {}", url);
-                if let Err(err) = client
-                    .put_metadata(&url, &addr_str, metadata.clone(), &token)
-                    .await
-                {
-                    log::error!("{:?}", err);
-                    // TODO: Error handling -> remove as peer
-                }
-            }
+            let _response = peer_handler
+                .get_keyserver_manager()
+                .uniform_broadcast_raw_metadata(
+                    &addr_str,
+                    db_wrapper.serialized_auth_wrapper,
+                    token,
+                    SETTINGS.peering.push_fan_size,
+                )
+                .await;
+
+            // TODO: Remove errors from peer list
         }
     }
 }

@@ -39,7 +39,9 @@ impl IntoResponse for PeerError {
     }
 }
 
-pub async fn get_peers<C>(peer_handler: PeerHandler<C>) -> Result<Response<Body>, PeerError> {
+pub async fn get_peers<S: Clone>(
+    peer_handler: PeerHandler<S>,
+) -> Result<Response<Body>, PeerError> {
     if !SETTINGS.peering.enabled {
         return Err(PeerError::Unavailable);
     }

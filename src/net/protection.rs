@@ -2,9 +2,10 @@ use std::{fmt, sync::Arc};
 
 use bitcoincash_addr::Address;
 use bytes::Bytes;
-use cashweb::bitcoin_client::HttpConnector;
+use cashweb::bitcoin_client::HttpClient;
 use cashweb::token::{extract_pop, schemes::chain_commitment::*};
 use http::header::HeaderMap;
+use hyper::Error as HyperError;
 use log::info;
 use prost::Message as _;
 use ring::digest::{digest, SHA256};
@@ -15,7 +16,7 @@ use crate::{models::wrapper::AuthWrapper, net::payments};
 #[derive(Debug)]
 pub enum ProtectionError {
     MissingToken(Vec<u8>, Vec<u8>),
-    Validation(ValidationError),
+    Validation(ValidationError<HyperError>),
     Decode(prost::DecodeError),
 }
 
@@ -51,7 +52,7 @@ pub async fn pop_protection(
     addr: Address,
     auth_wrapper_raw: Bytes,
     header_map: HeaderMap,
-    token_scheme: Arc<ChainCommitmentScheme<HttpConnector>>,
+    token_scheme: Arc<ChainCommitmentScheme<HttpClient>>,
 ) -> Result<(Address, Bytes, AuthWrapper, Vec<u8>), ProtectionError> {
     let auth_wrapper =
         AuthWrapper::decode(auth_wrapper_raw.clone()).map_err(ProtectionError::Decode)?;
@@ -63,7 +64,7 @@ pub async fn pop_protection(
     };
 
     // SHA256 of the public key
-    let pub_key_hash = digest(&SHA256, &auth_wrapper.pub_key);
+    let pub_key_hash = digest(&SHA256, &auth_wrapper.public_key);
 
     match extract_pop(&header_map) {
         Some(pop_token) => {

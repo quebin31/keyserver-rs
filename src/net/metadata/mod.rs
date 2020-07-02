@@ -1,32 +1,39 @@
 pub mod errors;
 
+use std::fmt;
+
 use bitcoincash_addr::Address;
 use bytes::Bytes;
-use http::header::{HeaderMap, HeaderValue, AUTHORIZATION};
-use hyper::client::connect::Connect;
+use http::{
+    header::{HeaderMap, HeaderValue, AUTHORIZATION},
+    Request,
+};
 use prost::Message as _;
 use tokio::task;
+use tower_service::Service;
 use warp::{http::Response, hyper::Body};
 
 use super::{HEADER_VALUE_FALSE, SAMPLING};
 use crate::{
     db::Database,
     models::{database::DatabaseWrapper, wrapper::AuthWrapper},
-    peering::PeerHandler,
-    peering::TokenCache,
+    peering::{PeerHandler, TokenCache},
+    SETTINGS,
 };
 pub use errors::*;
 
 /// Handles metadata GET requests.
-pub async fn get_metadata<C>(
+pub async fn get_metadata<S>(
     addr: Address,
     headers: HeaderMap,
     database: Database,
-    peer_handler: PeerHandler<C>,
+    peer_handler: PeerHandler<S>,
 ) -> Result<Response<Body>, GetMetadataError>
 where
-    C: Clone + Send + Sync,
-    C: Connect + 'static,
+    S: Service<Request<Body>, Response = Response<Body>>,
+    S: Send + Clone + 'static,
+    S::Future: Send,
+    S::Error: fmt::Debug + Send,
 {
     // Get from database
     let wrapper_opt = database
@@ -55,11 +62,20 @@ where
 
     // Sample peers
     let addr_str = addr.encode().unwrap();
-    match peer_handler.sample_metadata(&addr_str).await {
-        Ok((raw_authwrapper, token)) => Ok(Response::builder()
-            .header(AUTHORIZATION, token)
-            .body(Body::from(raw_authwrapper))
-            .unwrap()),
+    match peer_handler
+        .get_keyserver_manager()
+        .uniform_sample_metadata(&addr_str, SETTINGS.peering.pull_fan_size)
+        .await
+    {
+        Ok(sample_response) => {
+            let metadata_package = sample_response.response;
+            let token = metadata_package.token;
+            let raw_auth_wrapper = metadata_package.raw_auth_wrapper;
+            Ok(Response::builder()
+                .header(AUTHORIZATION, token)
+                .body(Body::from(raw_auth_wrapper))
+                .unwrap())
+        }
         _ => Err(GetMetadataError::NotFound),
     }
 }

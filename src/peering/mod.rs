@@ -1,127 +1,119 @@
-mod client;
 mod token_cache;
 
-pub use client::*;
 pub use token_cache::*;
 
-use std::{collections::HashSet, sync::Arc};
+use std::{fmt, sync::Arc};
 
-use bytes::Buf;
-use hyper::client::connect::Connect;
+use cashweb::keyserver_client::{
+    services::{GetPeersError, SampleError},
+    KeyserverManager,
+};
+use hyper::{
+    client::{Client as HttpClient, HttpConnector},
+    Body, Request, Response, Uri,
+};
+use log::warn;
 use prost::Message as _;
-use rand::{rngs::OsRng, seq::IteratorRandom};
 use rocksdb::Error as RocksError;
 use tokio::sync::RwLock;
+use tower_service::Service;
 
 use crate::{
     db::Database,
     models::keyserver::{Peer, Peers},
-    SETTINGS,
 };
 
+pub fn parse_uri_warn(uri_str: &str) -> Option<Uri> {
+    let uri = uri_str.parse();
+    warn!("could not parse peer {}", uri_str);
+    uri.ok()
+}
+
 #[derive(Clone)]
-pub struct PeerHandler<C> {
-    peers: Arc<RwLock<HashSet<String>>>,
-    client: PeeringClient<C>,
+pub struct PeerHandler<S> {
+    keyserver_manager: KeyserverManager<S>,
+    peers_cache: Arc<RwLock<Vec<u8>>>,
 }
 
-impl<C> PeerHandler<C>
-where
-    C: Clone + Send + Sync,
-    C: Connect + 'static,
-{
-    /// Construct new `PeerHandler`.
-    pub fn new(peers: HashSet<String>, connector: C) -> Self {
+fn uris_to_peers(uris: &[Uri]) -> Peers {
+    let peers = uris
+        .iter()
+        .map(|uri| uri.to_string())
+        .map(|uri_str| Peer { url: uri_str })
+        .collect();
+    Peers { peers }
+}
+
+fn uris_to_raw_peers(uris: &[Uri]) -> Vec<u8> {
+    let mut buffer = Vec::with_capacity(uris.len());
+    let peers = uris_to_peers(uris);
+    peers.encode(&mut buffer).unwrap(); // This is safe
+    buffer
+}
+
+impl PeerHandler<HttpClient<HttpConnector>> {
+    /// Construct new [`PeerHandler`].
+    pub fn new(uris: Vec<Uri>) -> Self {
+        let http_client = HttpClient::new();
+        let peers_cache = Arc::new(RwLock::new(uris_to_raw_peers(&uris)));
+        let keyserver_manager = KeyserverManager::from_service(http_client, uris);
         Self {
-            peers: Arc::new(RwLock::new(peers)),
-            client: PeeringClient::new(connector),
+            keyserver_manager,
+            peers_cache,
         }
-    }
-
-    pub async fn traverse(&self) -> HashSet<String> {
-        // TODO: Remove clones
-        let mut current_urls = self.get_urls().await;
-        let mut new_urls = current_urls.clone();
-
-        loop {
-            // Fan out and find peers
-            let found_urls = self.client.get_peer_fan(&new_urls).await;
-
-            // New distinct URLs
-            new_urls = found_urls.difference(&current_urls).cloned().collect();
-
-            let new_size = current_urls.len() + current_urls.len();
-            if new_urls.is_empty() {
-                // If no new URLs then stop
-                break;
-            } else if new_size > SETTINGS.peering.max_peers as usize {
-                // If reached maximum then stop
-                new_urls
-                    .into_iter()
-                    .take(new_size - SETTINGS.peering.max_peers as usize)
-                    .for_each(|url| {
-                        current_urls.insert(url);
-                    });
-                break;
-            } else {
-                // Add new urls
-                current_urls = current_urls.union(&new_urls).cloned().collect();
-            }
-        }
-
-        current_urls
-    }
-
-    pub async fn sample_metadata(&self, addr: &str) -> Result<(Vec<u8>, String), PeerError> {
-        let sample = self.sample().await;
-        let mut metadata_fan = self.client.get_metadata_fan(addr, &sample).await;
-        let (raw_auth_wrapper, token) = metadata_fan.pop().ok_or(PeerError::NotFound)?;
-        // TODO: Find latest
-        Ok((raw_auth_wrapper.bytes().to_vec(), token))
-    }
-
-    pub async fn sample(&self) -> Vec<String> {
-        // Sample peers
-        self.peers
-            .read()
-            .await
-            .iter()
-            .choose_multiple(&mut OsRng, SETTINGS.peering.fan_size)
-            .into_iter()
-            .map(move |url| url.to_string())
-            .collect()
     }
 }
 
-impl<C> PeerHandler<C> {
-    pub async fn get_urls(&self) -> HashSet<String> {
-        self.peers.read().await.clone()
+impl<S> PeerHandler<S>
+where
+    S: Clone,
+{
+    pub fn get_keyserver_manager(&self) -> &KeyserverManager<S> {
+        &self.keyserver_manager
     }
 
-    pub async fn set_peers(&mut self, peers: HashSet<String>) {
-        *self.peers.write().await = peers;
+    pub async fn get_urls(&self) -> Vec<Uri> {
+        self.keyserver_manager.get_uris().read().await.clone()
+    }
+
+    pub async fn set_peers(&self, uris: Vec<Uri>) {
+        let mut peer_cache_write = self.peers_cache.write().await;
+        let uris_shared = self.keyserver_manager.get_uris();
+        let mut uris_write = uris_shared.write().await;
+        *peer_cache_write = uris_to_raw_peers(&uris);
+        *uris_write = uris;
     }
 
     pub async fn get_raw_peers(&self) -> Vec<u8> {
-        // Serialize peers
-        let peers = Peers {
-            peers: self
-                .peers
-                .read()
-                .await
-                .iter()
-                .map(|uri| Peer {
-                    url: uri.to_string(),
-                })
-                .collect(),
-        };
-        let mut raw_peers = Vec::with_capacity(peers.encoded_len());
-        peers.encode(&mut raw_peers).unwrap();
-        raw_peers
+        self.peers_cache.read().await.clone()
     }
 
     pub async fn persist(&self, database: &Database) -> Result<(), RocksError> {
         let raw_peers = self.get_raw_peers().await;
         database.put_peers(&raw_peers)
+    }
+}
+
+impl<S> PeerHandler<S>
+where
+    S: Service<Request<Body>, Response = Response<Body>>,
+    S: Send + Clone + 'static,
+    S::Future: Send,
+    S::Error: fmt::Debug + Send,
+{
+    pub async fn inflate(&self) -> Result<(), SampleError<GetPeersError<S::Error>>> {
+        // Crawl peers, collecting Peers
+        let aggregate_response = self.get_keyserver_manager().crawl_peers().await?;
+        // TODO: Ban misbehaviour
+
+        // Collect URIs
+        let uris = aggregate_response
+            .response
+            .peers
+            .into_iter()
+            .filter_map(|peer| parse_uri_warn(&peer.url))
+            .collect();
+        self.set_peers(uris).await;
+        Ok(())
     }
 }

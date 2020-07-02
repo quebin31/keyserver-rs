@@ -18,9 +18,9 @@ use cashweb::{
     token::schemes::chain_commitment::ChainCommitmentScheme,
 };
 use futures::prelude::*;
-use hyper::client::HttpConnector;
+use hyper::{client::HttpConnector, http::Uri};
 use lazy_static::lazy_static;
-use log::info;
+use log::{error, info};
 use warp::{
     http::{header, Method},
     Filter,
@@ -51,22 +51,25 @@ async fn main() {
     let db = Database::try_new(&SETTINGS.db_path).expect("failed to open database");
 
     // Fetch peers from settings
-    let peers_settings: Vec<_> = SETTINGS.peering.peers.clone();
+    let peers_settings: Vec<Uri> = SETTINGS
+        .peering
+        .peers
+        .iter()
+        .filter_map(|peer_str| peering::parse_uri_warn(peer_str))
+        .collect();
 
     // Retrieve saved peers from database
     let peers_opt = db.get_peers().unwrap(); // Unrecoverable
-    let peers_db: std::collections::HashSet<String> = peers_opt
+    let peers_db: Vec<Uri> = peers_opt
         .unwrap_or_default()
         .peers
         .into_iter()
-        .map(|peer| peer.url)
+        .filter_map(|peer| peering::parse_uri_warn(&peer.url))
         .collect();
 
     // Combine collected peers
     let mut peers = peers_db;
-    for peer in peers_settings.into_iter() {
-        peers.insert(peer);
-    }
+    peers.extend(peers_settings);
 
     // Setup peer connector
     let mut connector = HttpConnector::new();
@@ -74,9 +77,10 @@ async fn main() {
     connector.set_connect_timeout(Some(Duration::from_secs(SETTINGS.peering.timeout)));
 
     // Setup peer state
-    let mut peer_handler = PeerHandler::new(peers, connector);
-    let new_peers = peer_handler.traverse().await;
-    peer_handler.set_peers(new_peers).await;
+    let peer_handler = PeerHandler::new(peers);
+    if let Err(err) = peer_handler.inflate().await {
+        error!("{:?}", err)
+    };
 
     // Persist peers
     if let Err(err) = peer_handler.persist(&db).await {

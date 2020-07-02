@@ -86,25 +86,14 @@ password = "password"
 
 [limits]
 # Maximum metadata size (5 Kb)
-metadata_size = 5_120
+metadata_size = 5_000
 
-# Maximum payment size (3 Kb)
-payment_size = 3_072
+# Maximum payment size (3 KB)
+payment_size = 3_000
 
 [payments]
-# The payment timeout
-timeout = 60_000
-
-# The price of a POP token
-token_fee = 100_000
-
 # BIP70 payment memo
 memo = "Thanks for your custom!"
-
-# HMAC secret, given in hexidecimal
-# --hmac-secret
-# NOTE: This will not be given a default value in release compilation due to security considerations.
-hmac_secret = "1234"
 
 [peering]
 # Whether peering should be enabled
@@ -113,6 +102,23 @@ enabled = true
 # Maximum number of peers
 max_peers = 128
 
+# Peer connection timeout (1 minute)
+timeout = 60_000
+
+# Peer connection keep alive (30 seconds)
+keep_alive = 30_000
+
+# Size of the pull gossip fan out
+pull_fan_size = 4
+
+# Size of the push gossip fan out
+push_fan_size = 4
+
+# Number of blocks between receive and metadata broadcast
+broadcast_delay = 2
+
+# List of peers
+peers = []
 ```
 
 ### Running

@@ -11,11 +11,9 @@ const DEFAULT_RPC_USER: &str = "user";
 const DEFAULT_RPC_PASSWORD: &str = "password";
 const DEFAULT_NETWORK: &str = "regtest";
 const DEFAULT_PING_INTERVAL: u64 = 10_000;
-const DEFAULT_METADATA_LIMIT: usize = 1024 * 5; // 5Kb
-const DEFAULT_PAYMENT_LIMIT: usize = 1024 * 3; // 3Kb
-const DEFAULT_PAYMENT_TIMEOUT: usize = 1_000 * 60; // 60 seconds
+const DEFAULT_METADATA_LIMIT: usize = 1_000 * 5; // 5Kb
+const DEFAULT_PAYMENT_LIMIT: usize = 1_000 * 3; // 3Kb
 const DEFAULT_TRUNCATION_LENGTH: usize = 500;
-const DEFAULT_TOKEN_FEE: u64 = 100_000;
 const DEFAULT_MEMO: &str = "Thanks for your custom!";
 const DEFAULT_MAX_PEERS: u32 = 128;
 const DEFAULT_PEERING: bool = true;
@@ -44,15 +42,7 @@ pub struct Limits {
 
 #[derive(Debug, Deserialize)]
 pub struct Payment {
-    pub timeout: u64,
-    pub token_fee: u64,
     pub memo: String,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct Websocket {
-    pub ping_interval: u64,
-    pub truncation_length: u64,
 }
 
 #[derive(Debug, Deserialize)]
@@ -61,7 +51,8 @@ pub struct Peering {
     pub max_peers: u32,
     pub timeout: u64,
     pub keep_alive: u64,
-    pub fan_size: usize,
+    pub pull_fan_size: usize,
+    pub push_fan_size: usize,
     pub broadcast_delay: usize,
     pub peers: Vec<String>,
 }
@@ -77,7 +68,6 @@ pub struct Settings {
     pub limits: Limits,
     pub payments: Payment,
     pub peering: Peering,
-    pub websocket: Websocket,
 }
 
 impl Settings {
@@ -112,16 +102,15 @@ impl Settings {
         s.set_default("limits.metadata_size", DEFAULT_METADATA_LIMIT as i64)?;
         s.set_default("limits.payment_size", DEFAULT_PAYMENT_LIMIT as i64)?;
 
-        s.set_default("payments.token_fee", DEFAULT_TOKEN_FEE as i64)?;
         s.set_default("payments.memo", DEFAULT_MEMO)?;
-        s.set_default("payments.timeout", DEFAULT_PAYMENT_TIMEOUT as i64)?;
 
         s.set_default("peering.enabled", DEFAULT_PEERING)?;
         s.set_default("peering.max_peers", DEFAULT_MAX_PEERS as i64)?;
         s.set_default("peering.timeout", DEFAULT_PEER_TIMEOUT as i64)?;
         s.set_default("peering.keep_alive", DEFAULT_PEER_KEEP_ALIVE as i64)?;
         s.set_default("peering.peers", DEFAULT_PEERS.to_vec())?;
-        s.set_default("peering.fan_size", DEFAULT_PEER_FAN_SIZE as i64)?;
+        s.set_default("peering.push_fan_size", DEFAULT_PEER_FAN_SIZE as i64)?;
+        s.set_default("peering.pull_fan_size", DEFAULT_PEER_FAN_SIZE as i64)?;
         s.set_default(
             "peering.broadcast_delay",
             DEFAULT_PEER_BROADCAST_DELAY as i64,

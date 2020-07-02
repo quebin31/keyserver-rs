@@ -4,7 +4,7 @@ use std::{
 };
 
 use bitcoincash_addr::{cashaddr::EncodingError as AddrEncodingError, Address};
-use cashweb::bitcoin_client::{BitcoinClient, HttpConnector, NodeError};
+use cashweb::bitcoin_client::{BitcoinClient, HttpClient, HttpError, NodeError};
 use cashweb::{
     bitcoin::{
         transaction::{DecodeError as TransactionDecodeError, Transaction},
@@ -37,7 +37,7 @@ pub enum PaymentError {
     MissingCommitment,
     MalformedTx(TransactionDecodeError),
     MissingMerchantData,
-    Node(NodeError),
+    Node(HttpError),
     IncorrectLengthPreimage,
     Address(AddrEncodingError),
 }
@@ -82,7 +82,7 @@ impl IntoResponse for PaymentError {
 
 pub async fn process_payment(
     payment: Payment,
-    bitcoin_client: BitcoinClient<HttpConnector>,
+    bitcoin_client: BitcoinClient<HttpClient>,
 ) -> Result<Response<Body>, PaymentError> {
     // Deserialize transactions
     let txs_res: Result<Vec<(Transaction, Vec<u8>)>, _> = payment
@@ -172,7 +172,7 @@ pub async fn process_payment(
 #[derive(Debug)]
 pub enum PaymentRequestError {
     IncorrectLengthPreimage,
-    Node(NodeError),
+    Node(HttpError),
     UnepxectedNetwork,
     PubkeyDigestHex(hex::FromHexError),
     MetadataDigestHex(hex::FromHexError),
@@ -218,18 +218,17 @@ pub fn construct_payment_response(pub_key_hash: &[u8], metadata_digest: &[u8]) -
     let op_return_pre: [u8; 2] = [106, COMMITMENT_SIZE as u8];
     let script = [&op_return_pre[..], commitment.as_ref()].concat();
     let output = Output {
-        amount: Some(SETTINGS.payments.token_fee),
+        amount: None,
         script,
     };
 
     // Valid interval
     let current_time = SystemTime::now();
-    let expiry_time = current_time + Duration::from_millis(SETTINGS.payments.timeout);
 
     let payment_details = PaymentDetails {
         network: Some(SETTINGS.network.to_string()),
         time: current_time.duration_since(UNIX_EPOCH).unwrap().as_secs(),
-        expires: Some(expiry_time.duration_since(UNIX_EPOCH).unwrap().as_secs()),
+        expires: None,
         memo: None,
         merchant_data: Some(commitment_preimage),
         outputs: vec![output],
