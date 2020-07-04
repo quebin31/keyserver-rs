@@ -25,8 +25,13 @@ use crate::{
 
 pub fn parse_uri_warn(uri_str: &str) -> Option<Uri> {
     let uri = uri_str.parse();
-    warn!("could not parse peer {}", uri_str);
-    uri.ok()
+    match uri {
+        Ok(some) => Some(some),
+        Err(err) => {
+            warn!("{} {}", err, uri_str);
+            None
+        }
+    }
 }
 
 #[derive(Clone)]

@@ -68,13 +68,16 @@ where
         .await
     {
         Ok(sample_response) => {
-            let metadata_package = sample_response.response;
-            let token = metadata_package.token;
-            let raw_auth_wrapper = metadata_package.raw_auth_wrapper;
-            Ok(Response::builder()
-                .header(AUTHORIZATION, token)
-                .body(Body::from(raw_auth_wrapper))
-                .unwrap())
+            if let Some((_, metadata_package)) = sample_response.response {
+                let token = metadata_package.token;
+                let raw_auth_wrapper = metadata_package.raw_auth_wrapper;
+                Ok(Response::builder()
+                    .header(AUTHORIZATION, token)
+                    .body(Body::from(raw_auth_wrapper))
+                    .unwrap())
+            } else {
+                Err(GetMetadataError::NotFound)
+            }
         }
         _ => Err(GetMetadataError::NotFound),
     }

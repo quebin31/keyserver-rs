@@ -288,7 +288,7 @@ dependencies = [
 [[package]]
 name = "cashweb"
 version = "0.1.0-alpha.3"
-source = "git+https://github.com/cashweb/cashweb-rs#29603b7ddaeae0bc8aef824600ab673c9827ea66"
+source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
 dependencies = [
  "cashweb-auth-wrapper",
  "cashweb-bitcoin",
@@ -305,7 +305,7 @@ dependencies = [
 [[package]]
 name = "cashweb-auth-wrapper"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#29603b7ddaeae0bc8aef824600ab673c9827ea66"
+source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
 dependencies = [
  "cashweb-secp256k1",
  "prost",
@@ -316,7 +316,7 @@ dependencies = [
 [[package]]
 name = "cashweb-bitcoin"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#29603b7ddaeae0bc8aef824600ab673c9827ea66"
+source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
 dependencies = [
  "bytes",
  "cashweb-secp256k1",
@@ -327,7 +327,7 @@ dependencies = [
 [[package]]
 name = "cashweb-bitcoin-client"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#29603b7ddaeae0bc8aef824600ab673c9827ea66"
+source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
 dependencies = [
  "async-json-rpc",
  "hex",
@@ -341,7 +341,7 @@ dependencies = [
 [[package]]
 name = "cashweb-keyserver"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/cashweb/cashweb-rs#29603b7ddaeae0bc8aef824600ab673c9827ea66"
+source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
 dependencies = [
  "prost",
  "prost-build",
@@ -350,7 +350,7 @@ dependencies = [
 [[package]]
 name = "cashweb-keyserver-client"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#29603b7ddaeae0bc8aef824600ab673c9827ea66"
+source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
 dependencies = [
  "bytes",
  "cashweb-auth-wrapper",
@@ -370,7 +370,7 @@ dependencies = [
 [[package]]
 name = "cashweb-payments"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#29603b7ddaeae0bc8aef824600ab673c9827ea66"
+source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
 dependencies = [
  "bytes",
  "dashmap",
@@ -384,7 +384,7 @@ dependencies = [
 [[package]]
 name = "cashweb-relay"
 version = "0.1.0"
-source = "git+https://github.com/cashweb/cashweb-rs#29603b7ddaeae0bc8aef824600ab673c9827ea66"
+source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
 dependencies = [
  "aes",
  "block-modes",
@@ -399,7 +399,7 @@ dependencies = [
 [[package]]
 name = "cashweb-relay-client"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/cashweb/cashweb-rs#29603b7ddaeae0bc8aef824600ab673c9827ea66"
+source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
 dependencies = [
  "cashweb-auth-wrapper",
  "cashweb-relay",
@@ -435,7 +435,7 @@ dependencies = [
 [[package]]
 name = "cashweb-token"
 version = "0.1.0-alpha.3"
-source = "git+https://github.com/cashweb/cashweb-rs#29603b7ddaeae0bc8aef824600ab673c9827ea66"
+source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
 dependencies = [
  "base64 0.12.3",
  "cashweb-bitcoin",
@@ -449,9 +449,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.56"
+version = "1.0.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "77c1f1d60091c1b73e2b1f4560ab419204b178e625fa945ded7b660becd2bd46"
+checksum = "0fde55d2a2bfaa4c9668bbc63f531fbdeee3ffe188f4662511ce2c22b3eedebe"
 dependencies = [
  "jobserver",
 ]
