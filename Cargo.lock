@@ -42,6 +42,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "ahash"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94e200a506d98f285fcd550bd2b0e5eacdfd53775e6d3aefaf2781571aabfe6f"
+dependencies = [
+ "const-random",
+]
+
+[[package]]
 name = "aho-corasick"
 version = "0.7.13"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -288,7 +297,7 @@ dependencies = [
 [[package]]
 name = "cashweb"
 version = "0.1.0-alpha.3"
-source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
+source = "git+https://github.com/cashweb/cashweb-rs#4625eace5f0f384cd843c110562b2e755a46b230"
 dependencies = [
  "cashweb-auth-wrapper",
  "cashweb-bitcoin",
@@ -305,7 +314,7 @@ dependencies = [
 [[package]]
 name = "cashweb-auth-wrapper"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
+source = "git+https://github.com/cashweb/cashweb-rs#4625eace5f0f384cd843c110562b2e755a46b230"
 dependencies = [
  "cashweb-secp256k1",
  "prost",
@@ -316,7 +325,7 @@ dependencies = [
 [[package]]
 name = "cashweb-bitcoin"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
+source = "git+https://github.com/cashweb/cashweb-rs#4625eace5f0f384cd843c110562b2e755a46b230"
 dependencies = [
  "bytes",
  "cashweb-secp256k1",
@@ -327,7 +336,7 @@ dependencies = [
 [[package]]
 name = "cashweb-bitcoin-client"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
+source = "git+https://github.com/cashweb/cashweb-rs#4625eace5f0f384cd843c110562b2e755a46b230"
 dependencies = [
  "async-json-rpc",
  "hex",
@@ -341,7 +350,7 @@ dependencies = [
 [[package]]
 name = "cashweb-keyserver"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
+source = "git+https://github.com/cashweb/cashweb-rs#4625eace5f0f384cd843c110562b2e755a46b230"
 dependencies = [
  "prost",
  "prost-build",
@@ -350,7 +359,7 @@ dependencies = [
 [[package]]
 name = "cashweb-keyserver-client"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
+source = "git+https://github.com/cashweb/cashweb-rs#4625eace5f0f384cd843c110562b2e755a46b230"
 dependencies = [
  "bytes",
  "cashweb-auth-wrapper",
@@ -370,7 +379,7 @@ dependencies = [
 [[package]]
 name = "cashweb-payments"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
+source = "git+https://github.com/cashweb/cashweb-rs#4625eace5f0f384cd843c110562b2e755a46b230"
 dependencies = [
  "bytes",
  "dashmap",
@@ -384,7 +393,7 @@ dependencies = [
 [[package]]
 name = "cashweb-relay"
 version = "0.1.0"
-source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
+source = "git+https://github.com/cashweb/cashweb-rs#4625eace5f0f384cd843c110562b2e755a46b230"
 dependencies = [
  "aes",
  "block-modes",
@@ -399,7 +408,7 @@ dependencies = [
 [[package]]
 name = "cashweb-relay-client"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
+source = "git+https://github.com/cashweb/cashweb-rs#4625eace5f0f384cd843c110562b2e755a46b230"
 dependencies = [
  "cashweb-auth-wrapper",
  "cashweb-relay",
@@ -435,7 +444,7 @@ dependencies = [
 [[package]]
 name = "cashweb-token"
 version = "0.1.0-alpha.3"
-source = "git+https://github.com/cashweb/cashweb-rs#dc8050884f39c86fe1d504ebf48c8ada435de585"
+source = "git+https://github.com/cashweb/cashweb-rs#4625eace5f0f384cd843c110562b2e755a46b230"
 dependencies = [
  "base64 0.12.3",
  "cashweb-bitcoin",
@@ -578,11 +587,12 @@ dependencies = [
 
 [[package]]
 name = "dashmap"
-version = "3.11.4"
+version = "3.11.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8cfcd41ae02d60edded204341d2798ba519c336c51a37330aa4b98a1128def32"
+checksum = "7daf68f8d2587be01687a29f5f7206f67448745d16b280686790a1a8632d9f07"
 dependencies = [
- "ahash",
+ "ahash 0.3.8",
+ "ahash 0.4.0",
  "cfg-if",
  "num_cpus",
 ]
@@ -607,11 +617,10 @@ dependencies = [
 
 [[package]]
 name = "dirs"
-version = "2.0.2"
+version = "3.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "13aea89a5c93364a98e9b37b2fa237effbb694d5cfe01c5b70941f7eb087d5e3"
+checksum = "142995ed02755914747cc6ca76fc7e4583cd18578746716d0508ea6ed558b9ff"
 dependencies = [
- "cfg-if",
  "dirs-sys",
 ]
 
