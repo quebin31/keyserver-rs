@@ -47,15 +47,7 @@ impl TokenCache {
             None => return,
         };
 
-        // Unpack peer state
-        // let peers = peer_state.peers.read().await;
-        // let client = peer_state.client.clone();
-
-        // Sample peers
-        // let url_choices: Vec<_> = peers
-        //     .iter()
-        //     .choose_multiple(&mut OsRng, SETTINGS.peering.fan_size);
-
+        // Broadcast each metadata
         for addr in token_block.into_iter() {
             let db_wrapper = match db.get_metadata(addr.as_body()) {
                 Ok(Some(some)) => some,

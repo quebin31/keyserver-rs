@@ -11,8 +11,8 @@ const DEFAULT_RPC_USER: &str = "user";
 const DEFAULT_RPC_PASSWORD: &str = "password";
 const DEFAULT_NETWORK: &str = "regtest";
 const DEFAULT_PING_INTERVAL: u64 = 10_000;
-const DEFAULT_METADATA_LIMIT: usize = 1_000 * 5; // 5Kb
-const DEFAULT_PAYMENT_LIMIT: usize = 1_000 * 3; // 3Kb
+const DEFAULT_METADATA_LIMIT: usize = 1_000 * 5; // 5KB
+const DEFAULT_PAYMENT_LIMIT: usize = 1_000 * 3; // 3KB
 const DEFAULT_TRUNCATION_LENGTH: usize = 500;
 const DEFAULT_MEMO: &str = "Thanks for your custom!";
 const DEFAULT_MAX_PEERS: u32 = 128;
@@ -38,6 +38,7 @@ pub struct BitcoinRpc {
 #[derive(Debug, Deserialize)]
 pub struct Limits {
     pub metadata_size: u64,
+    pub payment_size: u64,
 }
 
 #[derive(Debug, Deserialize)]

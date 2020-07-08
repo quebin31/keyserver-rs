@@ -60,7 +60,7 @@ pub async fn pop_protection(
     let metadata_hash = if auth_wrapper.payload_digest.len() == 32 {
         auth_wrapper.payload_digest.clone()
     } else {
-        digest(&SHA256, &auth_wrapper_raw).as_ref().to_vec()
+        digest(&SHA256, &auth_wrapper.payload).as_ref().to_vec()
     };
 
     // SHA256 of the public key
@@ -77,7 +77,7 @@ pub async fn pop_protection(
         }
         None => Err(ProtectionError::MissingToken(
             pub_key_hash.as_ref().to_vec(),
-            metadata_hash.to_vec(),
+            metadata_hash,
         )),
     }
 }

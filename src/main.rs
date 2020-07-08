@@ -201,7 +201,7 @@ async fn main() {
         .and(warp::post())
         .and(warp::header::headers_cloned())
         .and(warp::body::content_length_limit(
-            SETTINGS.limits.metadata_size,
+            SETTINGS.limits.payment_size,
         ))
         .and(warp::body::bytes())
         .and_then(move |headers, body| {
