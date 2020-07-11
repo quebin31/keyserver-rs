@@ -13,7 +13,7 @@ async_zmq = "0.3.2"
 base64 = "0.12.3"
 bitcoincash-addr = "0.5.2"
 bytes = "0.5.5"
-cashweb = { version = "0.1.0-alpha.3", git = "https://github.com/cashweb/cashweb-rs" }
+cashweb = "0.1.0-alpha.4"
 clap = { version = "2.33.1", features = ["yaml"] }
 config = "0.10.1"
 dashmap = "3.11.7"

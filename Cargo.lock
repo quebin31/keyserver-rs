@@ -287,8 +287,9 @@ dependencies = [
 
 [[package]]
 name = "cashweb"
-version = "0.1.0-alpha.3"
-source = "git+https://github.com/cashweb/cashweb-rs#bb2277da71484c44c7b7fec5481d96131f0ea548"
+version = "0.1.0-alpha.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e4a5df939cd7dc065c69b94b65b877170b87d4de09c10d99df7307a629e26192"
 dependencies = [
  "cashweb-auth-wrapper",
  "cashweb-bitcoin",
@@ -304,8 +305,9 @@ dependencies = [
 
 [[package]]
 name = "cashweb-auth-wrapper"
-version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#bb2277da71484c44c7b7fec5481d96131f0ea548"
+version = "0.1.0-alpha.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "dfb1f1ad8064cbba3b6cffc848c3e1227f808e5103dddc8e8de003f1e40dc6a3"
 dependencies = [
  "cashweb-secp256k1",
  "prost",
@@ -315,8 +317,9 @@ dependencies = [
 
 [[package]]
 name = "cashweb-bitcoin"
-version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#bb2277da71484c44c7b7fec5481d96131f0ea548"
+version = "0.1.0-alpha.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f989d5254f384325e00603480c9a1a3e2be2dc9f83c5b06485d1d609a327b10a"
 dependencies = [
  "bytes",
  "cashweb-secp256k1",
@@ -327,7 +330,8 @@ dependencies = [
 [[package]]
 name = "cashweb-bitcoin-client"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#bb2277da71484c44c7b7fec5481d96131f0ea548"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d071d7d742e528b2da27d8b13110d7e610db3bffb852b54deccac4a015eefdcf"
 dependencies = [
  "async-json-rpc",
  "hex",
@@ -341,7 +345,8 @@ dependencies = [
 [[package]]
 name = "cashweb-keyserver"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/cashweb/cashweb-rs#bb2277da71484c44c7b7fec5481d96131f0ea548"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "de7e1cf7211e7b12a2a8e964273827f4482e6b08e2ea78b56debd9d6a0500d92"
 dependencies = [
  "prost",
  "prost-build",
@@ -349,8 +354,9 @@ dependencies = [
 
 [[package]]
 name = "cashweb-keyserver-client"
-version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#bb2277da71484c44c7b7fec5481d96131f0ea548"
+version = "0.1.0-alpha.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7b22624d54f198f2e7cb67d49a9865e75244087de5e28541541999a098e1d1e"
 dependencies = [
  "bytes",
  "cashweb-auth-wrapper",
@@ -370,7 +376,8 @@ dependencies = [
 [[package]]
 name = "cashweb-payments"
 version = "0.1.0-alpha.1"
-source = "git+https://github.com/cashweb/cashweb-rs#bb2277da71484c44c7b7fec5481d96131f0ea548"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9f07810686dfc4c80d8f93fcf0e8a2c397ed3606de58c29f1500a700500e499a"
 dependencies = [
  "bytes",
  "dashmap",
@@ -383,8 +390,9 @@ dependencies = [
 
 [[package]]
 name = "cashweb-relay"
-version = "0.1.0"
-source = "git+https://github.com/cashweb/cashweb-rs#bb2277da71484c44c7b7fec5481d96131f0ea548"
+version = "0.1.0-alpha.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d8bf32496ccb6ed266a9c2840c7135beb4a32ce122b8362c04cb404c15f2f3c3"
 dependencies = [
  "aes",
  "block-modes",
@@ -399,7 +407,8 @@ dependencies = [
 [[package]]
 name = "cashweb-relay-client"
 version = "0.1.0-alpha.0"
-source = "git+https://github.com/cashweb/cashweb-rs#bb2277da71484c44c7b7fec5481d96131f0ea548"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8170d5fdf07ec6535e038745afc1e6279cbe8364cde1ab24f1a32e891688d71c"
 dependencies = [
  "cashweb-auth-wrapper",
  "cashweb-relay",
@@ -434,8 +443,9 @@ dependencies = [
 
 [[package]]
 name = "cashweb-token"
-version = "0.1.0-alpha.3"
-source = "git+https://github.com/cashweb/cashweb-rs#bb2277da71484c44c7b7fec5481d96131f0ea548"
+version = "0.1.0-alpha.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4ab7c33cd5ad693402a18f93fbbefe0a4c66cbdae1683daf2e82669665ca16a2"
 dependencies = [
  "base64 0.12.3",
  "cashweb-bitcoin",
@@ -449,9 +459,9 @@ dependencies = [
 
 [[package]]
 name = "cc"
-version = "1.0.57"
+version = "1.0.58"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fde55d2a2bfaa4c9668bbc63f531fbdeee3ffe188f4662511ce2c22b3eedebe"
+checksum = "f9a06fb2e53271d7c279ec1efea6ab691c35a2ae67ec0d91d7acec0caf13b518"
 dependencies = [
  "jobserver",
 ]
@@ -1138,9 +1148,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.71"
+version = "0.2.72"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9457b06509d27052635f90d6466700c65095fdf75409b3fbdd903e988b886f49"
+checksum = "a9f8082297d534141b30c8d39e9b1773713ab50fdbe4ff30f750d063b3bfd701"
 
 [[package]]
 name = "libloading"
@@ -1853,9 +1863,9 @@ dependencies = [
 
 [[package]]
 name = "redox_syscall"
-version = "0.1.56"
+version = "0.1.57"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2439c63f3f6139d1b57529d16bc3b8bb855230c8efcc5d3a896c8bea7c3b1e84"
+checksum = "41cc0f7e4d5d4544e8861606a285bb08d3e70712ccc7d2b84d7c0ccfaf4b05ce"
 
 [[package]]
 name = "redox_users"
@@ -2374,9 +2384,9 @@ dependencies = [
 
 [[package]]
 name = "try-lock"
-version = "0.2.2"
+version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "e604eb7b43c06650e854be16a2a03155743d3752dd1c943f6829e26b7a36e382"
+checksum = "59547bce71d9c38b83d9c0e92b6066c4253371f15005def0c30d9657f50c7642"
 
 [[package]]
 name = "tungstenite"
