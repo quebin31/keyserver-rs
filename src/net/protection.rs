@@ -1,4 +1,4 @@
-use std::{fmt, sync::Arc};
+use std::sync::Arc;
 
 use bitcoincash_addr::Address;
 use bytes::Bytes;
@@ -6,28 +6,22 @@ use cashweb::bitcoin_client::HttpClient;
 use cashweb::token::{extract_pop, schemes::chain_commitment::*};
 use http::header::HeaderMap;
 use hyper::Error as HyperError;
-use log::info;
 use prost::Message as _;
 use ring::digest::{digest, SHA256};
+use thiserror::Error;
+use tracing::info;
 use warp::{http::Response, hyper::Body, reject::Reject};
 
 use crate::{models::wrapper::AuthWrapper, net::payments};
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum ProtectionError {
+    #[error("missing token, pubkey: {0:?}")] // TODO: Make this prettier
     MissingToken(Vec<u8>, Vec<u8>),
+    #[error("validation failed: {0}")]
     Validation(ValidationError<HyperError>),
+    #[error("failed to decode authorization wrapper: {0}")]
     Decode(prost::DecodeError),
-}
-
-impl fmt::Display for ProtectionError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::MissingToken(_, _) => f.write_str("missing token"),
-            Self::Validation(err) => err.fmt(f),
-            Self::Decode(err) => err.fmt(f),
-        }
-    }
 }
 
 pub async fn protection_error_recovery(err: &ProtectionError) -> Response<Body> {
@@ -68,7 +62,7 @@ pub async fn pop_protection(
 
     match extract_pop(&header_map) {
         Some(pop_token) => {
-            info!("found token {}", pop_token);
+            info!(message = "found token", token = %pop_token);
             let raw_token = token_scheme
                 .validate_token(pub_key_hash.as_ref(), &metadata_hash, pop_token)
                 .await

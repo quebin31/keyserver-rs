@@ -20,7 +20,8 @@ use cashweb::{
 use futures::prelude::*;
 use hyper::{client::HttpConnector, http::Uri};
 use lazy_static::lazy_static;
-use log::{error, info};
+use tracing::{error, info};
+use tracing_subscriber::{fmt, EnvFilter};
 use warp::{
     http::{header, Method},
     Filter,
@@ -45,7 +46,10 @@ async fn main() {
     if env::var_os("RUST_LOG").is_none() {
         env::set_var("RUST_LOG", "info");
     }
-    pretty_env_logger::init();
+    let subscriber = fmt::Subscriber::builder()
+        .with_env_filter(EnvFilter::from_default_env())
+        .finish();
+    tracing::subscriber::set_global_default(subscriber).expect("no global subscriber has been set");
 
     // Initialize database
     let db = Database::try_new(&SETTINGS.db_path).expect("failed to open database");
@@ -79,12 +83,12 @@ async fn main() {
     // Setup peer state
     let peer_handler = PeerHandler::new(peers);
     if let Err(err) = peer_handler.inflate().await {
-        error!("{:?}", err)
+        error!(message = "failed to inflate peer list", error = %err)
     };
 
     // Persist peers
     if let Err(err) = peer_handler.persist(&db).await {
-        log::error!("failed to persist new peer state; {}", err);
+        error!(message = "failed to persist peers to database", error = %err);
     }
 
     // Token cache
@@ -105,7 +109,7 @@ async fn main() {
         while let Some(val) = subscriber.next().await {
             if let Ok(inner) = val {
                 if let Some(block) = inner.get(1) {
-                    info!("found block {}", hex::encode(block.as_ref()));
+                    info!(message = "found block", block_id = %hex::encode(block.as_ref()));
                     token_cache_inner
                         .broadcast_block(&peer_handler_inner, &db_inner)
                         .await;

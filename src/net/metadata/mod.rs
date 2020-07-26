@@ -33,7 +33,7 @@ where
     S: Service<Request<Body>, Response = Response<Body>>,
     S: Send + Clone + 'static,
     S::Future: Send,
-    S::Error: fmt::Debug + Send,
+    S::Error: fmt::Debug + Send + fmt::Display,
 {
     // Get from database
     let wrapper_opt = database

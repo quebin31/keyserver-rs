@@ -11,8 +11,9 @@ pub use protection::*;
 use std::{convert::Infallible, fmt};
 
 use bitcoincash_addr::Address;
+use thiserror::Error;
+use tracing::error;
 use warp::{
-    filters::body::BodyDeserializeError,
     http::Response,
     hyper::Body,
     reject::{PayloadTooLarge, Reject, Rejection},
@@ -21,7 +22,7 @@ use warp::{
 pub const SAMPLING: &str = "Sample-Peers";
 pub const HEADER_VALUE_FALSE: &str = "false";
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub struct AddressDecode(
     bitcoincash_addr::cashaddr::DecodingError,
     bitcoincash_addr::base58::DecodingError,
@@ -72,56 +73,51 @@ pub trait IntoResponse: fmt::Display + Sized {
 
 /// Global rejection handler, takes an rejection and converts it into a `Response`.
 pub async fn handle_rejection(err: Rejection) -> Result<Response<Body>, Infallible> {
-    if let Some(err) = err.find::<BodyDeserializeError>() {
-        log::error!("{:#?}", err);
-        return Ok(Response::builder()
-            .status(400)
-            .body(Body::from("unexpected body serialization"))
-            .unwrap());
+    if let Some(err) = err.find::<AddressDecode>() {
+        error!(message = "failed to decode address", error = %err);
+        return Ok(err.into_response());
     }
 
-    if let Some(err) = err.find::<AddressDecode>() {
-        log::error!("{:#?}", err);
-        return Ok(err.into_response());
-    }
     if let Some(err) = err.find::<GetMetadataError>() {
-        log::error!("{:#?}", err);
+        error!(message = "failed to get metadata", error = %err);
         return Ok(err.into_response());
     }
+
     if let Some(err) = err.find::<PutMetadataError>() {
-        log::error!("{:#?}", err);
+        error!(message = "failed to put metadata", error = %err);
         return Ok(err.into_response());
     }
+
     if let Some(err) = err.find::<PaymentError>() {
-        log::error!("{:#?}", err);
+        error!(message = "payment failed", error = %err);
         return Ok(err.into_response());
     }
 
     if let Some(err) = err.find::<PaymentRequestError>() {
-        log::error!("{:#?}", err);
+        error!(message = "payment request error", error = %err);
         return Ok(err.into_response());
     }
 
-    if let Some(err) = err.find::<PeerError>() {
-        log::error!("{:#?}", err);
+    if let Some(err) = err.find::<PeeringUnavailible>() {
+        error!(message = "failed to get peers", error = %err);
         return Ok(err.into_response());
     }
 
     if let Some(err) = err.find::<ProtectionError>() {
-        log::error!("{:#?}", err);
+        error!(message = "protection triggered", error = %err);
         return Ok(protection_error_recovery(err).await);
     }
 
-    if let Some(err) = err.find::<PayloadTooLarge>() {
-        log::error!("{:#?}", err);
+    if let Some(_) = err.find::<PayloadTooLarge>() {
+        error!("payload too large");
         return Ok(Response::builder().status(413).body(Body::empty()).unwrap());
     }
 
     if err.is_not_found() {
-        log::error!("{:#?}", err);
+        error!("page not found");
         return Ok(Response::builder().status(404).body(Body::empty()).unwrap());
     }
 
-    log::error!("unexpected error found {:?}", err);
+    error!(message = "unexpected error", error = ?err);
     Ok(Response::builder().status(500).body(Body::empty()).unwrap())
 }

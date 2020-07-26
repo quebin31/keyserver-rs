@@ -12,11 +12,11 @@ use hyper::{
     client::{Client as HttpClient, HttpConnector},
     Body, Request, Response, Uri,
 };
-use log::warn;
 use prost::Message as _;
 use rocksdb::Error as RocksError;
 use tokio::sync::RwLock;
 use tower_service::Service;
+use tracing::warn;
 
 use crate::{
     db::Database,
@@ -28,7 +28,7 @@ pub fn parse_uri_warn(uri_str: &str) -> Option<Uri> {
     match uri {
         Ok(some) => Some(some),
         Err(err) => {
-            warn!("{} {}", err, uri_str);
+            warn!(message = "uri parsing failed", error=%err, uri = %uri_str);
             None
         }
     }
@@ -104,7 +104,7 @@ where
     S: Service<Request<Body>, Response = Response<Body>>,
     S: Send + Clone + 'static,
     S::Future: Send,
-    S::Error: fmt::Debug + Send,
+    S::Error: fmt::Debug + Send + fmt::Display,
 {
     pub async fn inflate(&self) -> Result<(), SampleError<GetPeersError<S::Error>>> {
         // Crawl peers, collecting Peers

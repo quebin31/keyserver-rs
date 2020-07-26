@@ -36,7 +36,7 @@ impl TokenCache {
         S: Service<Request<Body>, Response = Response<Body>>,
         S: Send + Clone + 'static,
         <S as Service<Request<Body>>>::Future: Send,
-        S::Error: Send + fmt::Debug,
+        S::Error: Send + fmt::Debug + fmt::Display,
     {
         let mut token_blocks = self.tokens_blocks.write().await;
 

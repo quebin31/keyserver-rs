@@ -1,49 +1,26 @@
-use std::fmt;
-
-use rocksdb::Error as RocksError;
+use thiserror::Error;
 use warp::{http::Response, hyper::Body, reject::Reject};
 
 use super::IntoResponse;
 use crate::{peering::PeerHandler, SETTINGS};
 
-#[derive(Debug)]
-pub enum PeerError {
-    Database(RocksError),
-    Unavailable,
-}
+#[derive(Debug, Error)]
+#[error("peering not supported")]
+pub struct PeeringUnavailible;
 
-impl fmt::Display for PeerError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let printable = match self {
-            Self::Database(err) => return err.fmt(f),
-            Self::Unavailable => "peering not supported",
-        };
-        f.write_str(printable)
-    }
-}
+impl Reject for PeeringUnavailible {}
 
-impl From<RocksError> for PeerError {
-    fn from(err: RocksError) -> Self {
-        PeerError::Database(err)
-    }
-}
-
-impl Reject for PeerError {}
-
-impl IntoResponse for PeerError {
+impl IntoResponse for PeeringUnavailible {
     fn to_status(&self) -> u16 {
-        match self {
-            Self::Database(_) => 500,
-            Self::Unavailable => 501,
-        }
+        501
     }
 }
 
 pub async fn get_peers<S: Clone>(
     peer_handler: PeerHandler<S>,
-) -> Result<Response<Body>, PeerError> {
+) -> Result<Response<Body>, PeeringUnavailible> {
     if !SETTINGS.peering.enabled {
-        return Err(PeerError::Unavailable);
+        return Err(PeeringUnavailible);
     }
 
     let raw_peers = peer_handler.get_raw_peers().await;

@@ -1,7 +1,4 @@
-use std::{
-    fmt,
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use bitcoincash_addr::{cashaddr::EncodingError as AddrEncodingError, Address};
 use cashweb::bitcoin_client::{BitcoinClient, HttpClient, HttpError, NodeError};
@@ -15,6 +12,7 @@ use cashweb::{
 };
 use prost::Message as _;
 use ring::digest::{digest, SHA256};
+use thiserror::Error;
 use warp::{
     http::{
         header::{AUTHORIZATION, LOCATION},
@@ -31,30 +29,22 @@ pub const COMMITMENT_PREIMAGE_SIZE: usize = 32 + 32;
 pub const COMMITMENT_SIZE: usize = 32;
 pub const OP_RETURN: u8 = 106;
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum PaymentError {
+    #[error("preprocessing failed: {0}")]
     Preprocess(PreprocessingError),
+    #[error("missing commitment")]
     MissingCommitment,
+    #[error("malformed tx: {0}")]
     MalformedTx(TransactionDecodeError),
+    #[error("missing merchant data")]
     MissingMerchantData,
+    #[error("bitcoin request failed: {0}")]
     Node(HttpError),
+    #[error("incorrect length preimage")]
     IncorrectLengthPreimage,
+    #[error("address encoding failed: {0}")]
     Address(AddrEncodingError),
-}
-
-impl fmt::Display for PaymentError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let printable = match self {
-            Self::Address(err) => return err.fmt(f),
-            Self::Preprocess(err) => return err.fmt(f),
-            Self::MissingCommitment => "missing commitment",
-            Self::MalformedTx(err) => return err.fmt(f),
-            Self::MissingMerchantData => "missing merchant data",
-            Self::Node(err) => return err.fmt(f),
-            Self::IncorrectLengthPreimage => "incorrect length preimage",
-        };
-        f.write_str(printable)
-    }
 }
 
 impl Reject for PaymentError {}
@@ -169,29 +159,14 @@ pub async fn process_payment(
         .unwrap())
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum PaymentRequestError {
+    #[error("incorrect length preimage")]
     IncorrectLengthPreimage,
+    #[error("bitcoin request failed: {0}")]
     Node(HttpError),
+    #[error("unexpected network")]
     UnepxectedNetwork,
-    PubkeyDigestHex(hex::FromHexError),
-    MetadataDigestHex(hex::FromHexError),
-}
-
-impl fmt::Display for PaymentRequestError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::PubkeyDigestHex(err) => {
-                f.write_str(&format!("public key digest failed to decodel {}", err))
-            }
-            Self::MetadataDigestHex(err) => {
-                f.write_str(&format!("metadata digest failed to decodel {}", err))
-            }
-            Self::Node(err) => err.fmt(f),
-            Self::UnepxectedNetwork => f.write_str("unexpected network"),
-            Self::IncorrectLengthPreimage => f.write_str("incorrect length preimage"),
-        }
-    }
 }
 
 impl Reject for PaymentRequestError {}
@@ -199,9 +174,7 @@ impl Reject for PaymentRequestError {}
 impl IntoResponse for PaymentRequestError {
     fn to_status(&self) -> u16 {
         match self {
-            Self::PubkeyDigestHex(_) => 400,
             Self::IncorrectLengthPreimage => 400,
-            Self::MetadataDigestHex(_) => 400,
             Self::Node(err) => match err {
                 NodeError::Rpc(_) => 400,
                 _ => 500,

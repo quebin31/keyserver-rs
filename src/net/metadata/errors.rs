@@ -1,6 +1,5 @@
-use std::fmt;
-
 use rocksdb::Error as RocksError;
+use thiserror::Error;
 use warp::reject::Reject;
 
 use crate::{
@@ -8,28 +7,21 @@ use crate::{
     net::IntoResponse,
 };
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum PutMetadataError {
+    #[error("failed to write to database: {0}")]
     Database(RocksError),
+    #[error("failed to decode authorization wrapper: {0}")]
     MetadataDecode(prost::DecodeError),
+    #[error("failed to verify authorization wrapper: {0}")]
     InvalidAuthWrapper(ParseError),
+    #[error("failed to parse authorization wrapper: {0}")]
     VerifyAuthWrapper(VerifyError),
 }
 
 impl From<RocksError> for PutMetadataError {
     fn from(err: RocksError) -> Self {
         Self::Database(err)
-    }
-}
-
-impl fmt::Display for PutMetadataError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Database(err) => err.fmt(f),
-            Self::MetadataDecode(err) => err.fmt(f),
-            Self::InvalidAuthWrapper(err) => err.fmt(f),
-            Self::VerifyAuthWrapper(err) => err.fmt(f),
-        }
     }
 }
 
@@ -44,9 +36,11 @@ impl IntoResponse for PutMetadataError {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum GetMetadataError {
+    #[error("not found")]
     NotFound,
+    #[error("failed to read from database: {0}")]
     Database(RocksError),
 }
 
@@ -55,16 +49,6 @@ impl Reject for GetMetadataError {}
 impl From<RocksError> for GetMetadataError {
     fn from(err: RocksError) -> Self {
         Self::Database(err)
-    }
-}
-
-impl fmt::Display for GetMetadataError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let printable = match self {
-            Self::NotFound => "not found",
-            Self::Database(err) => return err.fmt(f),
-        };
-        f.write_str(printable)
     }
 }
 
