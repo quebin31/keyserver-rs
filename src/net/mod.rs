@@ -108,7 +108,7 @@ pub async fn handle_rejection(err: Rejection) -> Result<Response<Body>, Infallib
         return Ok(protection_error_recovery(err).await);
     }
 
-    if let Some(_) = err.find::<PayloadTooLarge>() {
+    if err.find::<PayloadTooLarge>().is_some() {
         error!("payload too large");
         return Ok(Response::builder().status(413).body(Body::empty()).unwrap());
     }
