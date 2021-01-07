@@ -237,23 +237,27 @@ async fn main() {
         ])
         .build();
 
+    // Init REST API
+    let rest_api = root
+        .or(payments)
+        .or(metadata_get)
+        .or(metadata_put)
+        .or(peers_get)
+        .recover(net::handle_rejection)
+        .with(cors)
+        .with(warp::trace::request());
+
     // If monitoring is enabled
     #[cfg(feature = "monitoring")]
     {
+        info!(monitoring = true);
+
         // Init Prometheus server
         let prometheus_server = warp::path("metrics").map(monitoring::export);
         let prometheus_task = warp::serve(prometheus_server).run(SETTINGS.bind_prom);
 
         // Init REST API
-        let rest_api = root
-            .or(payments)
-            .or(metadata_get)
-            .or(metadata_put)
-            .or(peers_get)
-            .recover(net::handle_rejection)
-            .with(cors)
-            .with(warp::log("keyserver"))
-            .with(warp::log::custom(monitoring::measure));
+        let rest_api = rest_api.with(warp::log::custom(monitoring::measure));
         let rest_api_task = warp::serve(rest_api).run(SETTINGS.bind);
 
         // Spawn servers
@@ -264,15 +268,8 @@ async fn main() {
     // If monitoring is disabled
     #[cfg(not(feature = "monitoring"))]
     {
-        // Init REST API
-        let rest_api = root
-            .or(payments)
-            .or(metadata_get)
-            .or(metadata_put)
-            .or(peers_get)
-            .recover(net::handle_rejection)
-            .with(cors)
-            .with(warp::log("keyserver"));
+        info!(monitoring = false);
+
         let rest_api_task = warp::serve(rest_api).run(SETTINGS.bind);
         tokio::spawn(rest_api_task).await.unwrap(); // Unrecoverable
     }
