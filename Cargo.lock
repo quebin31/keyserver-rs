@@ -1127,6 +1127,7 @@ dependencies = [
  "hex",
  "http",
  "hyper",
+ "hyper-tls",
  "lazy_static",
  "prometheus",
  "prometheus-static-metric",

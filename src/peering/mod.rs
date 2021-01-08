@@ -12,6 +12,7 @@ use hyper::{
     client::{Client as HttpClient, HttpConnector},
     Body, Request, Response, Uri,
 };
+use hyper_tls::HttpsConnector;
 use prost::Message as _;
 use rocksdb::Error as RocksError;
 use tokio::sync::RwLock;
@@ -56,10 +57,11 @@ fn uris_to_raw_peers(uris: &[Uri]) -> Vec<u8> {
     buffer
 }
 
-impl PeerHandler<HttpClient<HttpConnector>> {
+impl PeerHandler<HttpClient<HttpsConnector<HttpConnector>>> {
     /// Construct new [`PeerHandler`].
     pub fn new(uris: Vec<Uri>) -> Self {
-        let http_client = HttpClient::new();
+        let https = HttpsConnector::new();
+        let http_client = HttpClient::builder().build(https);
         let peers_cache = Arc::new(RwLock::new(uris_to_raw_peers(&uris)));
         let keyserver_manager = KeyserverManager::from_service(http_client, uris);
         Self {
