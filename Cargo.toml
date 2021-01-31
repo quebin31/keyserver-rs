@@ -13,7 +13,7 @@ async_zmq = "0.3.2"
 base64 = "0.13.0"
 bitcoincash-addr = "0.5.2"
 bytes = "1.0.1"
-cashweb = "0.1.0-alpha.9"
+cashweb = "0.1.0-alpha.10"
 clap = { version = "2.33.3", features = ["yaml"] }
 config = "0.10.1"
 dashmap = "4.0.2"
@@ -43,6 +43,3 @@ features = ["macros", "rt", "rt-multi-thread", "sync", "time"]
 
 [build-dependencies]
 prost-build = "0.7.0"
-
-[patch.crates-io]
-cashweb = { git = "https://github.com/quebin31/cashweb-rs", branch = "bump-to-tokio-1.0" }

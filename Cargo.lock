@@ -269,7 +269,8 @@ checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
 [[package]]
 name = "cashweb"
 version = "0.1.0-alpha.10"
-source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2debcb92d100ae2a9e0937e27c61884b2f69105c99736d1b58b5cef56545dd24"
 dependencies = [
  "cashweb-auth-wrapper",
  "cashweb-bitcoin",
@@ -286,7 +287,8 @@ dependencies = [
 [[package]]
 name = "cashweb-auth-wrapper"
 version = "0.1.0-alpha.5"
-source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "94152ababb614413aaee06866510f871bd90ea2cd597d35b747e48cdafc8d2e3"
 dependencies = [
  "cashweb-secp256k1",
  "prost",
@@ -298,7 +300,8 @@ dependencies = [
 [[package]]
 name = "cashweb-bitcoin"
 version = "0.1.0-alpha.4"
-source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "06a051a27487349ef8f4f6a8974d690e46fc05ff6ff8300fc2170ffee5d1e951"
 dependencies = [
  "bytes",
  "cashweb-secp256k1",
@@ -310,7 +313,8 @@ dependencies = [
 [[package]]
 name = "cashweb-bitcoin-client"
 version = "0.1.0-alpha.5"
-source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "095f2a67b0bab526dcea9a6405d504df08615d53412e0b575832058700315ee2"
 dependencies = [
  "async-json-rpc",
  "hex",
@@ -325,7 +329,8 @@ dependencies = [
 [[package]]
 name = "cashweb-keyserver"
 version = "0.1.0-alpha.4"
-source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "57fd714a9f91b8f5d6f62afbbb2bf447e795a58751520e4c286f2bdf2079f765"
 dependencies = [
  "prost",
  "prost-build",
@@ -335,7 +340,8 @@ dependencies = [
 [[package]]
 name = "cashweb-keyserver-client"
 version = "0.1.0-alpha.4"
-source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a74270394bc814b161451ee3ff87110795ee81a8c74d6f13863a61159f2d219d"
 dependencies = [
  "bytes",
  "cashweb-auth-wrapper",
@@ -356,7 +362,8 @@ dependencies = [
 [[package]]
 name = "cashweb-payments"
 version = "0.1.0-alpha.5"
-source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8576c31afc642241c18ae5eb7f0ea53c9f3a529e98660f720cd8568c2c75c488"
 dependencies = [
  "bytes",
  "dashmap",
@@ -371,7 +378,8 @@ dependencies = [
 [[package]]
 name = "cashweb-relay"
 version = "0.1.0-alpha.4"
-source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8a6e6cf494d4662c91b20e9232b8745975e9039aea5d788b0d878038b06e4e6d"
 dependencies = [
  "aes",
  "block-modes",
@@ -387,7 +395,8 @@ dependencies = [
 [[package]]
 name = "cashweb-relay-client"
 version = "0.1.0-alpha.4"
-source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c6655351f0a692e8bc8f6abe7179b99cb9b537b9a7a2f15ef87ba15feccb1853"
 dependencies = [
  "cashweb-auth-wrapper",
  "cashweb-relay",
@@ -424,7 +433,8 @@ dependencies = [
 [[package]]
 name = "cashweb-token"
 version = "0.1.0-alpha.9"
-source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5277ed0e6138846a4fbca465943e3e8f93504a6664f7a9235ac089a2a3bc420"
 dependencies = [
  "base64",
  "cashweb-bitcoin",
