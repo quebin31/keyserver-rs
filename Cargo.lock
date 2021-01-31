@@ -290,6 +290,7 @@ checksum = "b700ce4376041dcd0a327fd0097c41095743c4c8af8887265942faf1100bd040"
 [[package]]
 name = "cashweb"
 version = "0.1.0-alpha.10"
+source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
 dependencies = [
  "cashweb-auth-wrapper",
  "cashweb-bitcoin",
@@ -306,6 +307,7 @@ dependencies = [
 [[package]]
 name = "cashweb-auth-wrapper"
 version = "0.1.0-alpha.5"
+source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
 dependencies = [
  "cashweb-secp256k1",
  "prost",
@@ -317,6 +319,7 @@ dependencies = [
 [[package]]
 name = "cashweb-bitcoin"
 version = "0.1.0-alpha.4"
+source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
 dependencies = [
  "bytes",
  "cashweb-secp256k1",
@@ -328,6 +331,7 @@ dependencies = [
 [[package]]
 name = "cashweb-bitcoin-client"
 version = "0.1.0-alpha.5"
+source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
 dependencies = [
  "async-json-rpc",
  "hex",
@@ -342,6 +346,7 @@ dependencies = [
 [[package]]
 name = "cashweb-keyserver"
 version = "0.1.0-alpha.4"
+source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
 dependencies = [
  "prost",
  "prost-build",
@@ -351,6 +356,7 @@ dependencies = [
 [[package]]
 name = "cashweb-keyserver-client"
 version = "0.1.0-alpha.4"
+source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
 dependencies = [
  "bytes",
  "cashweb-auth-wrapper",
@@ -371,6 +377,7 @@ dependencies = [
 [[package]]
 name = "cashweb-payments"
 version = "0.1.0-alpha.5"
+source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
 dependencies = [
  "bytes",
  "dashmap",
@@ -385,6 +392,7 @@ dependencies = [
 [[package]]
 name = "cashweb-relay"
 version = "0.1.0-alpha.4"
+source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
 dependencies = [
  "aes",
  "block-modes",
@@ -400,6 +408,7 @@ dependencies = [
 [[package]]
 name = "cashweb-relay-client"
 version = "0.1.0-alpha.4"
+source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
 dependencies = [
  "cashweb-auth-wrapper",
  "cashweb-relay",
@@ -436,6 +445,7 @@ dependencies = [
 [[package]]
 name = "cashweb-token"
 version = "0.1.0-alpha.9"
+source = "git+https://github.com/quebin31/cashweb-rs?branch=bump-to-tokio-1.0#68cb3b94d589f9b52f0fa91accb57f5bad42b36a"
 dependencies = [
  "base64",
  "cashweb-bitcoin",

@@ -43,3 +43,6 @@ features = ["macros", "rt", "rt-multi-thread", "sync", "time"]
 
 [build-dependencies]
 prost-build = "0.7"
+
+[patch.crates-io]
+cashweb = { git = "https://github.com/quebin31/cashweb-rs", branch = "bump-to-tokio-1.0" }
